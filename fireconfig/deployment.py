@@ -1,0 +1,185 @@
+from typing import Any
+from typing import List
+from typing import Mapping
+from typing import MutableMapping
+from typing import Optional
+from typing import Tuple
+from typing import Union
+
+from cdk8s import ApiObject
+from cdk8s import Chart
+
+from fireconfig import k8s
+from fireconfig.container import ContainerBuilder
+from fireconfig.types import TaintEffect
+from fireconfig.volume import VolumesBuilder
+
+
+class DeploymentBuilder:
+    def __init__(self, *, namespace: str, selector: Mapping[str, str]):
+        self._namespace = namespace
+        self._selector = selector
+        self._annotations: MutableMapping[str, str] = {}
+        self._labels: MutableMapping[str, str] = {}
+        self._pod_annotations: MutableMapping[str, str] = {}
+        self._pod_labels: MutableMapping[str, str] = dict(selector)
+        self._containers: List[ContainerBuilder] = []
+        self._node_selector: Optional[Mapping[str, str]] = None
+        self._service_account_role: Optional[str] = None
+        self._service_account_role_is_cluster_role: bool = False
+        self._service_ports: Optional[List[int]] = None
+        self._tolerations: List[Tuple[str, TaintEffect]] = []
+        self._volumes: Optional[VolumesBuilder] = None
+        self._deps: List[ApiObject] = []
+
+    def with_annotation(self, key: str, value: str) -> 'DeploymentBuilder':
+        self._annotations[key] = value
+        return self
+
+    def with_label(self, key: str, value: str) -> 'DeploymentBuilder':
+        self._labels[key] = value
+        return self
+
+    def with_pod_annotation(self, key: str, value: str) -> 'DeploymentBuilder':
+        self._pod_annotations[key] = value
+        return self
+
+    def with_pod_label(self, key: str, value: str) -> 'DeploymentBuilder':
+        self._pod_labels[key] = value
+        return self
+
+    def with_containers(self, *containers: ContainerBuilder) -> 'DeploymentBuilder':
+        self._containers.extend(containers)
+        return self
+
+    def with_node_selector(self, key: str, value: str) -> 'DeploymentBuilder':
+        self._node_selector = {key: value}
+        return self
+
+    def with_service(self, ports: List[int]) -> 'DeploymentBuilder':
+        self._service_ports = ports
+        return self
+
+    def with_service_account_and_role_binding(
+        self,
+        role_name: str,
+        is_cluster_role: bool = False,
+    ) -> 'DeploymentBuilder':
+        self._service_account_role = role_name
+        self._service_account_role_is_cluster_role = is_cluster_role
+        return self
+
+    def with_toleration(self, key: str, effect: TaintEffect) -> 'DeploymentBuilder':
+        self._tolerations.append((key, effect))
+        return self
+
+    def with_volumes(self, volumes: VolumesBuilder) -> 'DeploymentBuilder':
+        self._volumes = volumes
+        return self
+
+    def with_dependencies(self, *deps: ApiObject) -> 'DeploymentBuilder':
+        self._deps.extend(deps)
+        return self
+
+    def build(self, chart: Chart) -> k8s.KubeDeployment:
+        meta: MutableMapping[str, Any] = {"namespace": self._namespace}
+        if self._annotations:
+            meta["annotations"] = self._annotations
+        if self._labels:
+            meta["labels"] = self._labels
+
+        pod_meta: MutableMapping[str, Any] = {"namespace": self._namespace}
+        if self._pod_annotations:
+            pod_meta["annotations"] = self._pod_annotations
+        pod_meta["labels"] = self._pod_labels
+
+        optional: MutableMapping[str, Any] = {}
+        if self._node_selector is not None:
+            optional["node_selector"] = self._node_selector
+
+        if self._service_account_role is not None:
+            sa = self._build_service_account(chart)
+            rb = self._build_role_binding_for_service_account(
+                chart, sa,
+                self._service_account_role,
+                self._service_account_role_is_cluster_role,
+            )
+            self._deps.append(sa)
+            self._deps.append(rb)
+            optional["service_account_name"] = sa.name
+
+        if self._service_ports is not None:
+            srv = self._build_service(chart)
+            self._deps.append(srv)
+
+        if len(self._tolerations) > 0:
+            optional["tolerations"] = [
+                {"key": t[0], "effect": t[1]} for t in self._tolerations
+            ]
+
+        if self._volumes is not None:
+            optional["volumes"] = self._volumes.build_volumes()
+
+        depl = k8s.KubeDeployment(
+            chart, "deployment",
+            metadata=k8s.ObjectMeta(**meta),
+            spec=k8s.DeploymentSpec(
+                selector=k8s.LabelSelector(match_labels=self._selector),
+                template=k8s.PodTemplateSpec(
+                    metadata=k8s.ObjectMeta(**pod_meta),
+                    spec=k8s.PodSpec(
+                        containers=[c.build() for c in self._containers],
+                        **optional,
+                    ),
+                )
+            )
+        )
+
+        for d in self._deps:
+            depl.add_dependency(d)
+
+        return depl
+
+    def _build_service_account(self, chart: Chart) -> k8s.KubeServiceAccount:
+        return k8s.KubeServiceAccount(
+            chart, "service-account",
+            metadata={"namespace": self._namespace},
+        )
+
+    def _build_service(self, chart: Chart) -> k8s.KubeService:
+        assert self._service_ports
+        return k8s.KubeService(
+            chart, "service",
+            metadata={"namespace": self._namespace},
+            spec=k8s.ServiceSpec(
+                ports=[
+                    k8s.ServicePort(port=p, target_port=k8s.IntOrString.from_number(p))
+                    for p in self._service_ports
+                ],
+                selector=self._selector,
+            ),
+        )
+
+    def _build_role_binding_for_service_account(
+        self,
+        chart: Chart,
+        service_account: k8s.KubeServiceAccount,
+        role_name: str,
+        is_cluster_role: bool,
+    ) -> Union[k8s.KubeClusterRoleBinding, k8s.KubeRoleBinding]:
+
+        subjects = [k8s.Subject(
+            kind="ServiceAccount",
+            name=service_account.name,
+            namespace=self._namespace,
+        )]
+        role_ref = k8s.RoleRef(
+            api_group="rbac.authorization.k8s.io",
+            kind="ClusterRole" if is_cluster_role else "Role",
+            name=role_name,
+        )
+
+        if is_cluster_role:
+            return k8s.KubeClusterRoleBinding(chart, "cluster-role-binding", subjects=subjects, role_ref=role_ref)
+        else:
+            return k8s.KubeRoleBinding(chart, "role-binding", subjects=subjects, role_ref=role_ref)

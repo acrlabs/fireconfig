@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "fireconfig"
+version = "0.1.0"
+description = "Configuration language for Kubernetes manifests"
+authors = ["David Morrison <drmorr@appliedcomputing.io>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+cdk8s = "^2.24.0"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
