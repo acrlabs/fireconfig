@@ -11,6 +11,7 @@ from cdk8s import Chart
 
 from fireconfig import k8s
 from fireconfig.container import ContainerBuilder
+from fireconfig.errors import FireConfigError
 from fireconfig.types import TaintEffect
 from fireconfig.volume import VolumesBuilder
 
@@ -29,9 +30,16 @@ class DeploymentBuilder:
         self._service_account_role_is_cluster_role: bool = False
         self._service: bool = False
         self._service_ports: Optional[List[int]] = None
+        self._service_object: Optional[k8s.KubeService] = None
         self._tolerations: List[Tuple[str, TaintEffect]] = []
         self._volumes: Optional[VolumesBuilder] = None
         self._deps: List[ApiObject] = []
+
+    def get_service_address(self) -> str:
+        if not self._service_object:
+            raise FireConfigError('No service object; have you called `build()`?')
+
+        return f'{self._service_object.name}.{self._namespace}'
 
     def with_annotation(self, key: str, value: str) -> 'DeploymentBuilder':
         self._annotations[key] = value
@@ -111,8 +119,8 @@ class DeploymentBuilder:
                 self._service_ports = []
                 for c in self._containers:
                     self._service_ports.extend(c.get_ports())
-            srv = self._build_service(chart)
-            self._deps.append(srv)
+            self._service_object = self._build_service(chart)
+            self._deps.append(self._service_object)
 
         if len(self._tolerations) > 0:
             optional["tolerations"] = [
