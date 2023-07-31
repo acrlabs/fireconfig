@@ -27,6 +27,7 @@ class DeploymentBuilder:
         self._node_selector: Optional[Mapping[str, str]] = None
         self._service_account_role: Optional[str] = None
         self._service_account_role_is_cluster_role: bool = False
+        self._service: bool = False
         self._service_ports: Optional[List[int]] = None
         self._tolerations: List[Tuple[str, TaintEffect]] = []
         self._volumes: Optional[VolumesBuilder] = None
@@ -56,7 +57,8 @@ class DeploymentBuilder:
         self._node_selector = {key: value}
         return self
 
-    def with_service(self, ports: List[int]) -> 'DeploymentBuilder':
+    def with_service(self, ports: Optional[List[int]] = None) -> 'DeploymentBuilder':
+        self._service = True
         self._service_ports = ports
         return self
 
@@ -71,10 +73,6 @@ class DeploymentBuilder:
 
     def with_toleration(self, key: str, effect: TaintEffect) -> 'DeploymentBuilder':
         self._tolerations.append((key, effect))
-        return self
-
-    def with_volumes(self, volumes: VolumesBuilder) -> 'DeploymentBuilder':
-        self._volumes = volumes
         return self
 
     def with_dependencies(self, *deps: ApiObject) -> 'DeploymentBuilder':
@@ -108,7 +106,11 @@ class DeploymentBuilder:
             self._deps.append(rb)
             optional["service_account_name"] = sa.name
 
-        if self._service_ports is not None:
+        if self._service:
+            if self._service_ports is None:
+                self._service_ports = []
+                for c in self._containers:
+                    self._service_ports.extend(c.get_ports())
             srv = self._build_service(chart)
             self._deps.append(srv)
 
@@ -117,8 +119,12 @@ class DeploymentBuilder:
                 {"key": t[0], "effect": t[1]} for t in self._tolerations
             ]
 
-        if self._volumes is not None:
-            optional["volumes"] = self._volumes.build_volumes()
+        vols: Mapping[str, Mapping[str, Any]] = dict()
+        for c in self._containers:
+            vols = {**vols, **c.get_volumes()}
+
+        if vols:
+            optional["volumes"] = list(vols.values())
 
         depl = k8s.KubeDeployment(
             chart, "deployment",

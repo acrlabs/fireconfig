@@ -2,8 +2,8 @@
 
 🔥Config is a (prototype of) a Python-based configuration-as-code library for generating Kubernetes manifests built on
 top of [cdk8s](https://cdk8s.io).  It is _extremely_ alpha code, so use at your own risk!  If this seems cool, I'd
-welcome pull requests to make it better!  There is currently no stable API, things may change significantly between
-versions.
+welcome pull requests to make it better!  There is currently no stable API, no tests, and no guarantees.  Things may
+be horribly broken, or change significantly between versions.
 
 ## Usage
 
@@ -31,7 +31,7 @@ class Nginx(Chart):
         deployment = fire.DeploymentBuilder(
             namespace="default",
             selector={"app": "nginx"},
-        ).with_service(listen_port).with_containers(container).build(self)
+        ).with_service().with_containers(container).build(self)
 ```
 
 This creates a Kubernetes manifest for an nginx pod and a service listening on port 8080.

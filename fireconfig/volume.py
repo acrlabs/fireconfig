@@ -1,4 +1,7 @@
+from typing import Any
+from typing import Iterable
 from typing import Mapping
+from typing import MutableMapping
 from typing import Optional
 from typing import Sequence
 
@@ -6,9 +9,9 @@ from fireconfig import k8s
 
 
 class VolumesBuilder:
-    def __init__(self):
-        self._volumes = {}
-        self._volume_mounts = {}
+    def __init__(self) -> None:
+        self._volumes: MutableMapping[str, Any] = {}
+        self._volume_mounts: MutableMapping[str, str] = {}
 
     def with_config_map(self, name: str, mount_path: str, config_map: k8s.KubeConfigMap) -> 'VolumesBuilder':
         self._volumes[name] = ("configMap", {
@@ -29,11 +32,14 @@ class VolumesBuilder:
                 path += data["items"][0]["path"]
         return path
 
-    def build_mounts(self, names: Optional[Sequence[str]] = None) -> Sequence[Mapping]:
+    def build_mounts(self, names: Optional[Iterable[str]] = None) -> Sequence[Mapping]:
         if names is None:
             names = self._volume_mounts.keys()
 
         return [{"name": name, "mountPath": self._volume_mounts[name]} for name in names]
 
-    def build_volumes(self) -> Sequence[Mapping]:
-        return [{"name": name, volume_type: data} for name, (volume_type, data) in self._volumes.items()]
+    def build_volumes(self, names: Optional[Iterable[str]] = None) -> Mapping[str, Mapping[str, Any]]:
+        if names is None:
+            names = self._volume_mounts.keys()
+
+        return {name: {"name": name, self._volumes[name][0]: self._volumes[name][1]} for name in names}

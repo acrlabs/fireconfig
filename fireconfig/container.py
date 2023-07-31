@@ -1,5 +1,6 @@
 from typing import Any
 from typing import Dict
+from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Set
@@ -23,8 +24,14 @@ class ContainerBuilder:
         self._volume_names: Optional[Sequence[str]] = None
         self._capabilities: Set[Capability] = set()
 
-    def get_ports(self):
+    def get_ports(self) -> Sequence[int]:
         return self._ports
+
+    def get_volumes(self) -> Mapping[str, Mapping[str, Any]]:
+        if self._volumes is None:
+            return dict()
+
+        return self._volumes.build_volumes(self._volume_names)
 
     def with_env(self, env: EnvBuilder, names: Optional[Sequence[str]] = None) -> 'ContainerBuilder':
         self._env = env
