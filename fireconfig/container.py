@@ -12,7 +12,7 @@ from fireconfig.volume import VolumesBuilder
 
 
 class ContainerBuilder:
-    def __init__(self, name: str, image: str, command: str, args: Optional[Sequence[str]] = None):
+    def __init__(self, name: str, image: str, command: Optional[str] = None, args: Optional[Sequence[str]] = None):
         self._name = name
         self._image = image
         self._command = command
@@ -53,8 +53,15 @@ class ContainerBuilder:
 
     def build(self) -> k8s.Container:
         optional: Dict[str, Any] = {}
+        if self._command:
+            optional["command"] = [self._command]
+        if self._args:
+            optional["args"] = self._args
+
         if self._env:
             optional["env"] = self._env.build(self._env_names)
+        else:
+            optional["env"] = []
         if self._ports:
             optional["ports"] = [
                 k8s.ContainerPort(container_port=p) for p in self._ports
@@ -67,7 +74,5 @@ class ContainerBuilder:
         return k8s.Container(
             name=self._name,
             image=self._image,
-            command=[self._command],
-            args=self._args,
             **optional,
         )

@@ -8,6 +8,7 @@ from typing import Union
 
 from cdk8s import ApiObject
 from cdk8s import Chart
+from cdk8s import JsonPatch
 
 from fireconfig import k8s
 from fireconfig.container import ContainerBuilder
@@ -31,7 +32,7 @@ class DeploymentBuilder:
         self._service: bool = False
         self._service_ports: Optional[List[int]] = None
         self._service_object: Optional[k8s.KubeService] = None
-        self._tolerations: List[Tuple[str, TaintEffect]] = []
+        self._tolerations: List[Tuple[str, str, TaintEffect]] = []
         self._volumes: Optional[VolumesBuilder] = None
         self._deps: List[ApiObject] = []
 
@@ -79,8 +80,13 @@ class DeploymentBuilder:
         self._service_account_role_is_cluster_role = is_cluster_role
         return self
 
-    def with_toleration(self, key: str, effect: TaintEffect) -> 'DeploymentBuilder':
-        self._tolerations.append((key, effect))
+    def with_toleration(
+        self,
+        key: str,
+        value: str = "",
+        effect: TaintEffect = TaintEffect.NoExecute,
+    ) -> 'DeploymentBuilder':
+        self._tolerations.append((key, value, effect))
         return self
 
     def with_dependencies(self, *deps: ApiObject) -> 'DeploymentBuilder':
@@ -124,7 +130,7 @@ class DeploymentBuilder:
 
         if len(self._tolerations) > 0:
             optional["tolerations"] = [
-                {"key": t[0], "effect": t[1]} for t in self._tolerations
+                {"key": t[0], "value": t[1], "effect": t[2]} for t in self._tolerations
             ]
 
         vols: Mapping[str, Mapping[str, Any]] = dict()
@@ -148,6 +154,12 @@ class DeploymentBuilder:
                 )
             )
         )
+
+        for i in range(len(self._containers)):
+            depl.add_json_patch(JsonPatch.add(
+                f"/spec/template/spec/containers/{i}/env/-",
+                {"name": "POD_OWNER", "value": depl.name},
+            ))
 
         for d in self._deps:
             depl.add_dependency(d)
