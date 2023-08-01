@@ -20,15 +20,15 @@ from fireconfig.volume import VolumesBuilder
 class DeploymentBuilder:
     def __init__(self, *, namespace: str, selector: Mapping[str, str]):
         self._namespace = namespace
-        self._selector = selector
-
         self._annotations: MutableMapping[str, str] = {}
         self._labels: MutableMapping[str, str] = {}
+        self._replicas: Union[int, Tuple[int, int]] = 1
+        self._selector = selector
+
         self._pod_annotations: MutableMapping[str, str] = {}
         self._pod_labels: MutableMapping[str, str] = dict(selector)
         self._containers: List[ContainerBuilder] = []
         self._node_selector: Optional[Mapping[str, str]] = None
-        self._replicas: Union[int, Tuple[int, int]] = 1
         self._service_account_role: Optional[str] = None
         self._service_account_role_is_cluster_role: bool = False
         self._service: bool = False
@@ -52,6 +52,15 @@ class DeploymentBuilder:
         self._labels[key] = value
         return self
 
+    def with_replicas(self, min_replicas: int, max_replicas: Optional[int] = None) -> 'DeploymentBuilder':
+        if max_replicas is not None:
+            if min_replicas > max_replicas:
+                raise ValueError(f'min_replicas cannot be larger than max_replicas: {min_replicas} > {max_replicas}')
+            self._replicas = (min_replicas, max_replicas)
+        else:
+            self._replicas = min_replicas
+        return self
+
     def with_pod_annotation(self, key: str, value: str) -> 'DeploymentBuilder':
         self._pod_annotations[key] = value
         return self
@@ -66,15 +75,6 @@ class DeploymentBuilder:
 
     def with_node_selector(self, key: str, value: str) -> 'DeploymentBuilder':
         self._node_selector = {key: value}
-        return self
-
-    def with_replicas(self, min_replicas: int, max_replicas: Optional[int] = None) -> 'DeploymentBuilder':
-        if max_replicas is not None:
-            if min_replicas > max_replicas:
-                raise ValueError(f'min_replicas cannot be larger than max_replicas: {min_replicas} > {max_replicas}')
-            self._replicas = (min_replicas, max_replicas)
-        else:
-            self._replicas = min_replicas
         return self
 
     def with_service(self, ports: Optional[List[int]] = None) -> 'DeploymentBuilder':
