@@ -21,12 +21,14 @@ class DeploymentBuilder:
     def __init__(self, *, namespace: str, selector: Mapping[str, str]):
         self._namespace = namespace
         self._selector = selector
+
         self._annotations: MutableMapping[str, str] = {}
         self._labels: MutableMapping[str, str] = {}
         self._pod_annotations: MutableMapping[str, str] = {}
         self._pod_labels: MutableMapping[str, str] = dict(selector)
         self._containers: List[ContainerBuilder] = []
         self._node_selector: Optional[Mapping[str, str]] = None
+        self._replicas: Union[int, Tuple[int, int]] = 1
         self._service_account_role: Optional[str] = None
         self._service_account_role_is_cluster_role: bool = False
         self._service: bool = False
@@ -64,6 +66,15 @@ class DeploymentBuilder:
 
     def with_node_selector(self, key: str, value: str) -> 'DeploymentBuilder':
         self._node_selector = {key: value}
+        return self
+
+    def with_replicas(self, min_replicas: int, max_replicas: Optional[int] = None) -> 'DeploymentBuilder':
+        if max_replicas is not None:
+            if min_replicas > max_replicas:
+                raise ValueError(f'min_replicas cannot be larger than max_replicas: {min_replicas} > {max_replicas}')
+            self._replicas = (min_replicas, max_replicas)
+        else:
+            self._replicas = min_replicas
         return self
 
     def with_service(self, ports: Optional[List[int]] = None) -> 'DeploymentBuilder':
@@ -105,6 +116,12 @@ class DeploymentBuilder:
             pod_meta["annotations"] = self._pod_annotations
         pod_meta["labels"] = self._pod_labels
 
+        if type(self._replicas) is tuple:
+            replicas: Optional[int] = None
+            raise NotImplementedError("No support for HPA currently")
+        else:
+            replicas = self._replicas  # type: ignore
+
         optional: MutableMapping[str, Any] = {}
         if self._node_selector is not None:
             optional["node_selector"] = self._node_selector
@@ -145,6 +162,7 @@ class DeploymentBuilder:
             metadata=k8s.ObjectMeta(**meta),
             spec=k8s.DeploymentSpec(
                 selector=k8s.LabelSelector(match_labels=self._selector),
+                replicas=replicas,
                 template=k8s.PodTemplateSpec(
                     metadata=k8s.ObjectMeta(**pod_meta),
                     spec=k8s.PodSpec(
