@@ -17,6 +17,14 @@ from fireconfig.types import TaintEffect
 from fireconfig.volume import VolumesBuilder
 
 
+_STANDARD_NAMESPACES = [
+    'default',
+    'kube-node-lease',
+    'kube-public',
+    'kube-system',
+]
+
+
 class DeploymentBuilder:
     def __init__(self, *, namespace: str, selector: Mapping[str, str]):
         self._namespace = namespace
@@ -105,6 +113,10 @@ class DeploymentBuilder:
         return self
 
     def build(self, chart: Chart) -> k8s.KubeDeployment:
+        if self._namespace not in _STANDARD_NAMESPACES:
+            ns = k8s.KubeNamespace(chart, "ns", metadata={"name": self._namespace})
+            self._deps.insert(0, ns)
+
         meta: MutableMapping[str, Any] = {"namespace": self._namespace}
         if self._annotations:
             meta["annotations"] = self._annotations
