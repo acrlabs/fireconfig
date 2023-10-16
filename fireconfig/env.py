@@ -1,13 +1,17 @@
+from typing import KeysView
 from typing import Mapping
+from typing import MutableMapping
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
+from typing import Union
 
 from fireconfig.types import DownwardAPIField
 
 
 class EnvBuilder:
-    def __init__(self):
-        self._env = {}
+    def __init__(self, env: Mapping[str, str] = dict()):
+        self._env: MutableMapping[str, Tuple[str, Union[str, Mapping]]] = {k: ("value", v) for (k, v) in env.items()}
 
     def with_field_ref(self, name: str, field: DownwardAPIField, key: Optional[str] = None) -> 'EnvBuilder':
         field_str = str(field)
@@ -17,7 +21,7 @@ class EnvBuilder:
         self._env[name] = ("valueFrom", {"fieldRef": {"fieldPath": field_str}})
         return self
 
-    def build(self, names: Optional[Sequence[str]] = None) -> Sequence[Mapping]:
+    def build(self, names: Optional[Union[Sequence[str], KeysView[str]]] = None) -> Sequence[Mapping]:
         if names is None:
             names = self._env.keys()
 

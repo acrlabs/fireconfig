@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fireconfig"
-version = "0.2.1"
+version = "0.2.2"
 description = "Configuration language for Kubernetes manifests"
 authors = ["David Morrison <drmorr@appliedcomputing.io>"]
 license = "MIT"
