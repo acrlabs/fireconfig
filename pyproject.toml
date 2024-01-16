@@ -8,11 +8,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-cdk8s = "^2.24.0"
+cdk8s = "^2"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.4.1"
-flake8 = "^6.0.0"
+mypy = "^1"
+flake8 = "*"
 
 [build-system]
 requires = ["poetry-core"]
