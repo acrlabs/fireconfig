@@ -12,11 +12,11 @@ from cdk8s import JsonPatch
 
 from fireconfig import k8s
 from fireconfig.container import ContainerBuilder
-from fireconfig.errors import FireConfigError
 from fireconfig.types import TaintEffect
 from fireconfig.volume import VolumesBuilder
 
 
+_APP_LABEL = "fireconfig.io/app"
 _STANDARD_NAMESPACES = [
     'default',
     'kube-node-lease',
@@ -26,20 +26,22 @@ _STANDARD_NAMESPACES = [
 
 
 class DeploymentBuilder:
-    def __init__(self, *, namespace: str, selector: Mapping[str, str]):
+    def __init__(self, *, namespace: str, app_key: str):
         self._namespace = namespace
         self._annotations: MutableMapping[str, str] = {}
         self._labels: MutableMapping[str, str] = {}
         self._replicas: Union[int, Tuple[int, int]] = 1
-        self._selector = selector
+        self._app_key = app_key
+        self._selector = {_APP_LABEL: app_key}
 
         self._pod_annotations: MutableMapping[str, str] = {}
-        self._pod_labels: MutableMapping[str, str] = dict(selector)
+        self._pod_labels: MutableMapping[str, str] = dict(self._selector)
         self._containers: List[ContainerBuilder] = []
         self._node_selector: Optional[Mapping[str, str]] = None
         self._service_account_role: Optional[str] = None
         self._service_account_role_is_cluster_role: bool = False
         self._service: bool = False
+        self._service_name: str = f"{self._app_key}-svc"
         self._service_ports: Optional[List[int]] = None
         self._service_object: Optional[k8s.KubeService] = None
         self._tolerations: List[Tuple[str, str, TaintEffect]] = []
@@ -47,10 +49,7 @@ class DeploymentBuilder:
         self._deps: List[ApiObject] = []
 
     def get_service_address(self) -> str:
-        if not self._service_object:
-            raise FireConfigError('No service object; have you called `build()`?')
-
-        return f'{self._service_object.name}.{self._namespace}'
+        return f'{self._service_name}.{self._namespace}'
 
     def with_annotation(self, key: str, value: str) -> 'DeploymentBuilder':
         self._annotations[key] = value
@@ -206,7 +205,7 @@ class DeploymentBuilder:
         assert self._service_ports
         return k8s.KubeService(
             chart, "service",
-            metadata={"namespace": self._namespace},
+            metadata={"name": self._service_name, "namespace": self._namespace},
             spec=k8s.ServiceSpec(
                 ports=[
                     k8s.ServicePort(port=p, target_port=k8s.IntOrString.from_number(p))
