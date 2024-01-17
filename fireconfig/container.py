@@ -5,6 +5,8 @@ from typing import Optional
 from typing import Sequence
 from typing import Set
 
+from cdk8s import Chart
+
 from fireconfig import k8s
 from fireconfig.env import EnvBuilder
 from fireconfig.resources import Resources
@@ -27,14 +29,9 @@ class ContainerBuilder:
         self._volume_names: Optional[Sequence[str]] = None
         self._capabilities: Set[Capability] = set()
 
-    def get_ports(self) -> Sequence[int]:
+    @property
+    def ports(self) -> Sequence[int]:
         return self._ports
-
-    def get_volumes(self) -> Mapping[str, Mapping[str, Any]]:
-        if self._volumes is None:
-            return dict()
-
-        return self._volumes.build_volumes(self._volume_names)
 
     def with_env(self, env: EnvBuilder, names: Optional[Sequence[str]] = None) -> 'ContainerBuilder':
         self._env = env
@@ -93,3 +90,9 @@ class ContainerBuilder:
             image=self._image,
             **optional,
         )
+
+    def build_volumes(self, chart: Chart) -> Mapping[str, Mapping[str, Any]]:
+        if self._volumes is None:
+            return dict()
+
+        return self._volumes.build_volumes(chart, self._volume_names)

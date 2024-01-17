@@ -35,9 +35,14 @@ class DeploymentBuilder(ObjectBuilder):
         self._service_account_role: Optional[str] = None
         self._service_account_role_is_cluster_role: bool = False
         self._service: bool = False
+        self._service_name: str = f"{self._app_label}-svc"
         self._service_ports: Optional[List[int]] = None
         self._tolerations: List[Tuple[str, str, TaintEffect]] = []
         self._volumes: Optional[VolumesBuilder] = None
+
+    @property
+    def service_name(self) -> str:
+        return self._service_name
 
     def with_replicas(self, min_replicas: int, max_replicas: Optional[int] = None) -> Self:
         if max_replicas is not None:
@@ -78,9 +83,9 @@ class DeploymentBuilder(ObjectBuilder):
         self._tolerations.append((key, value, effect))
         return self
 
-    def _build(self, namespace: str, meta: k8s.ObjectMeta, chart: Chart) -> k8s.KubeDeployment:
+    def _build(self, meta: k8s.ObjectMeta, chart: Chart) -> k8s.KubeDeployment:
         # TODO auto-add app key
-        pod_meta: MutableMapping[str, Any] = {"namespace": namespace}
+        pod_meta: MutableMapping[str, Any] = {}
         if self._pod_annotations:
             pod_meta["annotations"] = self._pod_annotations
         pod_meta["labels"] = self._pod_labels
@@ -96,9 +101,9 @@ class DeploymentBuilder(ObjectBuilder):
             optional["node_selector"] = self._node_selector
 
         if self._service_account_role is not None:
-            sa = self._build_service_account(namespace, chart)
+            sa = self._build_service_account(chart)
             rb = self._build_role_binding_for_service_account(
-                namespace, chart, sa,
+                chart, sa,
                 self._service_account_role,
                 self._service_account_role_is_cluster_role,
             )
@@ -110,8 +115,8 @@ class DeploymentBuilder(ObjectBuilder):
             if self._service_ports is None:
                 self._service_ports = []
                 for c in self._containers:
-                    self._service_ports.extend(c.get_ports())
-            service_object = self._build_service(namespace, chart)
+                    self._service_ports.extend(c.ports)
+            service_object = self._build_service(chart)
             self._deps.append(service_object)
 
         if len(self._tolerations) > 0:
@@ -121,7 +126,7 @@ class DeploymentBuilder(ObjectBuilder):
 
         vols: Mapping[str, Mapping[str, Any]] = dict()
         for c in self._containers:
-            vols = {**vols, **c.get_volumes()}
+            vols = {**vols, **c.build_volumes(chart)}
 
         if vols:
             optional["volumes"] = list(vols.values())
@@ -150,17 +155,14 @@ class DeploymentBuilder(ObjectBuilder):
 
         return depl
 
-    def _build_service_account(self, namespace: str, chart: Chart) -> k8s.KubeServiceAccount:
-        return k8s.KubeServiceAccount(
-            chart, f"{self._tag}sa",
-            metadata={"namespace": namespace},
-        )
+    def _build_service_account(self, chart: Chart) -> k8s.KubeServiceAccount:
+        return k8s.KubeServiceAccount(chart, f"{self._tag}sa")
 
-    def _build_service(self, namespace: str, chart: Chart) -> k8s.KubeService:
+    def _build_service(self, chart: Chart) -> k8s.KubeService:
         assert self._service_ports
         return k8s.KubeService(
             chart, "service",
-            metadata={"namespace": namespace},
+            metadata={"name": self._service_name},
             spec=k8s.ServiceSpec(
                 ports=[
                     k8s.ServicePort(port=p, target_port=k8s.IntOrString.from_number(p))
@@ -172,7 +174,6 @@ class DeploymentBuilder(ObjectBuilder):
 
     def _build_role_binding_for_service_account(
         self,
-        namespace: str,
         chart: Chart,
         service_account: k8s.KubeServiceAccount,
         role_name: str,
@@ -182,7 +183,6 @@ class DeploymentBuilder(ObjectBuilder):
         subjects = [k8s.Subject(
             kind="ServiceAccount",
             name=service_account.name,
-            namespace=namespace,
         )]
         role_ref = k8s.RoleRef(
             api_group="rbac.authorization.k8s.io",

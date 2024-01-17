@@ -11,13 +11,6 @@ from constructs import Construct
 
 from fireconfig import k8s
 
-_STANDARD_NAMESPACES = [
-    'default',
-    'kube-node-lease',
-    'kube-public',
-    'kube-system',
-]
-
 
 class ObjectBuilder(metaclass=ABCMeta):
     def __init__(self: Self):
@@ -37,26 +30,22 @@ class ObjectBuilder(metaclass=ABCMeta):
         self._deps.extend(deps)
         return self
 
-    def build(self, namespace: str, chart: Chart):
-        if namespace not in _STANDARD_NAMESPACES:
-            ns = k8s.KubeNamespace(chart, "ns", metadata={"name": namespace})
-            self._deps.insert(0, ns)
-
-        meta: MutableMapping[str, Any] = {"namespace": namespace}
+    def build(self, chart: Chart):
+        meta: MutableMapping[str, Any] = {}
         if self._annotations:
             meta["annotations"] = self._annotations
         if self._labels:
             meta["labels"] = self._labels
 
-        obj, *rest = self._build(namespace, k8s.ObjectMeta(**meta), chart)
+        obj = self._build(k8s.ObjectMeta(**meta), chart)
 
         for d in self._deps:
             obj.add_dependency(d)
 
-        return obj, *rest
+        return obj
 
     @abstractmethod
-    def _build(self, namespace: str, meta: k8s.ObjectMeta, chart: Chart):
+    def _build(self, meta: k8s.ObjectMeta, chart: Chart):
         ...
 
 
@@ -66,4 +55,4 @@ class NamespacedObject(metaclass=ABCMeta):
 
     def compile(self, namespace: str, app: Construct):
         chart = Chart(app, self.ID)
-        self._obj.build(namespace, chart)
+        self._obj.build(chart)
