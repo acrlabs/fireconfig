@@ -2,6 +2,7 @@ from typing import Any
 from typing import Dict
 from typing import Mapping
 from typing import Optional
+from typing import Self
 from typing import Sequence
 from typing import Set
 
@@ -33,7 +34,7 @@ class ContainerBuilder:
     def ports(self) -> Sequence[int]:
         return self._ports
 
-    def with_env(self, env: EnvBuilder, names: Optional[Sequence[str]] = None) -> 'ContainerBuilder':
+    def with_env(self, env: EnvBuilder, names: Optional[Sequence[str]] = None) -> Self:
         self._env = env
         self._env_names = names
         return self
@@ -42,19 +43,19 @@ class ContainerBuilder:
         self, *,
         requests: Optional[Mapping[str, Any]] = None,
         limits: Optional[Mapping[str, Any]] = None,
-    ) -> 'ContainerBuilder':
+    ) -> Self:
         self._resources = Resources(requests, limits)
         return self
 
-    def with_ports(self, *ports: int) -> 'ContainerBuilder':
+    def with_ports(self, *ports: int) -> Self:
         self._ports = ports
         return self
 
-    def with_security_context(self, capability: Capability) -> 'ContainerBuilder':
+    def with_security_context(self, capability: Capability) -> Self:
         self._capabilities.add(capability)
         return self
 
-    def with_volumes(self, volumes: VolumesBuilder, names: Optional[Sequence[str]] = None) -> 'ContainerBuilder':
+    def with_volumes(self, volumes: VolumesBuilder, names: Optional[Sequence[str]] = None) -> Self:
         self._volumes = volumes
         self._volume_names = names
         return self

@@ -1,2 +1,0 @@
-class FireConfigError(Exception):
-    pass

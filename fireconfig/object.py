@@ -7,7 +7,6 @@ from typing import Self
 
 from cdk8s import ApiObject
 from cdk8s import Chart
-from constructs import Construct
 
 from fireconfig import k8s
 
@@ -47,12 +46,3 @@ class ObjectBuilder(metaclass=ABCMeta):
     @abstractmethod
     def _build(self, meta: k8s.ObjectMeta, chart: Chart):
         ...
-
-
-class NamespacedObject(metaclass=ABCMeta):
-    _obj: ObjectBuilder
-    ID: str
-
-    def compile(self, namespace: str, app: Construct):
-        chart = Chart(app, self.ID)
-        self._obj.build(chart)

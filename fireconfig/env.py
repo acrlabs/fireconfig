@@ -2,6 +2,7 @@ from typing import KeysView
 from typing import Mapping
 from typing import MutableMapping
 from typing import Optional
+from typing import Self
 from typing import Sequence
 from typing import Tuple
 from typing import Union
@@ -13,7 +14,7 @@ class EnvBuilder:
     def __init__(self, env: Mapping[str, str] = dict()):
         self._env: MutableMapping[str, Tuple[str, Union[str, Mapping]]] = {k: ("value", v) for (k, v) in env.items()}
 
-    def with_field_ref(self, name: str, field: DownwardAPIField, key: Optional[str] = None) -> 'EnvBuilder':
+    def with_field_ref(self, name: str, field: DownwardAPIField, key: Optional[str] = None) -> Self:
         field_str = str(field)
         if field in (DownwardAPIField.ANNOTATION, DownwardAPIField.LABEL):
             field_str = field_str.format(key)

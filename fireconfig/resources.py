@@ -22,7 +22,7 @@ def parse_resource_map(m: ResourceMap) -> QuantityMap:
 
 
 class Resources:
-    def __init__(self, requests: Optional[ResourceMap], limits: Optional[ResourceMap]) -> None:
+    def __init__(self, requests: Optional[ResourceMap], limits: Optional[ResourceMap]):
         self.requests: Optional[QuantityMap] = None
         self.limits: Optional[QuantityMap] = None
 
