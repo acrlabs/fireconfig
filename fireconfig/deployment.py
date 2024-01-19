@@ -14,6 +14,7 @@ from fireconfig import k8s
 from fireconfig.container import ContainerBuilder
 from fireconfig.object import ObjectBuilder
 from fireconfig.types import TaintEffect
+from fireconfig.volume import VolumeDefsWithObject
 from fireconfig.volume import VolumesBuilder
 
 _APP_LABEL_KEY = "fireconfig.io/app"
@@ -116,20 +117,23 @@ class DeploymentBuilder(ObjectBuilder):
                 self._service_ports = []
                 for c in self._containers:
                     self._service_ports.extend(c.ports)
-            service_object = self._build_service(chart)
-            self._deps.append(service_object)
+            self._build_service(chart)
 
         if len(self._tolerations) > 0:
             optional["tolerations"] = [
                 {"key": t[0], "value": t[1], "effect": t[2]} for t in self._tolerations
             ]
 
-        vols: Mapping[str, Mapping[str, Any]] = dict()
+        vols: VolumeDefsWithObject = dict()
         for c in self._containers:
             vols = {**vols, **c.build_volumes(chart)}
 
         if vols:
-            optional["volumes"] = list(vols.values())
+            optional["volumes"] = []
+            for (defn, obj) in vols.values():
+                optional["volumes"].append(defn)
+                if obj is not None:
+                    self._deps.append(obj)
 
         depl = k8s.KubeDeployment(
             chart, f"{self._tag}depl",
@@ -183,6 +187,7 @@ class DeploymentBuilder(ObjectBuilder):
         subjects = [k8s.Subject(
             kind="ServiceAccount",
             name=service_account.name,
+            namespace=chart.namespace,
         )]
         role_ref = k8s.RoleRef(
             api_group="rbac.authorization.k8s.io",

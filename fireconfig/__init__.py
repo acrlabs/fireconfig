@@ -50,14 +50,17 @@ def compile(pkgs: Dict[str, List[AppPackage]]):
 
     dag = defaultdict(list)
     for ns, pkglist in pkgs.items():
+        parent = "global"
         if ns not in _STANDARD_NAMESPACES:
             k8s.KubeNamespace(gl, ns, metadata={"name": ns})
+            parent = f"global/{ns}"
+
         for pkg in pkglist:
             chart = Chart(app, pkg.id, namespace=ns)
             chart.add_dependency(gl)
             pkg.compile(chart)
 
-            dag["global"].append(pkg.id)
+            dag[parent].append(pkg.id)
 
     for obj in DependencyGraph(app.node).root.outbound:
         dag = walk_dep_graph(obj, dag)

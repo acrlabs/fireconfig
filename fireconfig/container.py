@@ -12,6 +12,7 @@ from fireconfig import k8s
 from fireconfig.env import EnvBuilder
 from fireconfig.resources import Resources
 from fireconfig.types import Capability
+from fireconfig.volume import VolumeDefsWithObject
 from fireconfig.volume import VolumesBuilder
 
 
@@ -92,7 +93,7 @@ class ContainerBuilder:
             **optional,
         )
 
-    def build_volumes(self, chart: Chart) -> Mapping[str, Mapping[str, Any]]:
+    def build_volumes(self, chart: Chart) -> VolumeDefsWithObject:
         if self._volumes is None:
             return dict()
 

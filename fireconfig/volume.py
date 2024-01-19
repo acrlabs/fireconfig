@@ -5,10 +5,15 @@ from typing import MutableMapping
 from typing import Optional
 from typing import Self
 from typing import Sequence
+from typing import Tuple
 
+from cdk8s import ApiObject
 from cdk8s import Chart
 
 from fireconfig import k8s
+
+
+VolumeDefsWithObject = Mapping[str, Tuple[Mapping[str, Any], Optional[ApiObject]]]
 
 
 class VolumesBuilder:
@@ -32,7 +37,7 @@ class VolumesBuilder:
 
         return [{"name": name, "mountPath": self._volume_mounts[name]} for name in names]
 
-    def build_volumes(self, chart: Chart, names: Optional[Iterable[str]] = None) -> Mapping[str, Mapping[str, Any]]:
+    def build_volumes(self, chart: Chart, names: Optional[Iterable[str]] = None) -> VolumeDefsWithObject:
         if names is None:
             names = self._volume_mounts.keys()
 
@@ -42,7 +47,7 @@ class VolumesBuilder:
                 continue
 
             cm = k8s.KubeConfigMap(chart, vol_name, data=data)
-            volumes[vol_name] = {
+            volumes[vol_name] = ({
                 "name": vol_name,
                 "configMap": {
                     "name": cm.name,
@@ -51,6 +56,6 @@ class VolumesBuilder:
                         "path": cm_entry,
                     } for cm_entry in data],
                 }
-            }
+            }, cm)
 
         return volumes
