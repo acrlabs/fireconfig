@@ -1,20 +1,21 @@
+import typing as T
 from abc import ABCMeta
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Dict
-from typing import List
 
 from cdk8s import App
 from cdk8s import Chart
 from cdk8s import DependencyGraph
 from constructs import Construct
 
-from fireconfig import k8s
 from fireconfig.container import ContainerBuilder
 from fireconfig.deployment import DeploymentBuilder
 from fireconfig.env import EnvBuilder
+from fireconfig.namespace import add_missing_namespace
+from fireconfig.output import format_graph_and_diff
+from fireconfig.plan import GLOBAL_CHART_NAME
+from fireconfig.plan import compute_diff
 from fireconfig.plan import walk_dep_graph
-from fireconfig.plan import write_mermaid_graph
 from fireconfig.volume import VolumesBuilder
 
 __all__ = [
@@ -22,14 +23,6 @@ __all__ = [
     'DeploymentBuilder',
     'EnvBuilder',
     'VolumesBuilder',
-]
-
-
-_STANDARD_NAMESPACES = [
-    'default',
-    'kube-node-lease',
-    'kube-public',
-    'kube-system',
 ]
 
 
@@ -44,27 +37,26 @@ class AppPackage(metaclass=ABCMeta):
         ...
 
 
-def compile(pkgs: Dict[str, List[AppPackage]]):
+def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str]) -> T.Tuple[str, str]:
     app = App()
-    gl = Chart(app, "global")
+    gl = Chart(app, GLOBAL_CHART_NAME)
 
     dag = defaultdict(list)
     for ns, pkglist in pkgs.items():
-        parent = "global"
-        if ns not in _STANDARD_NAMESPACES:
-            k8s.KubeNamespace(gl, ns, metadata={"name": ns})
-            parent = f"global/{ns}"
-
+        parent = add_missing_namespace(gl, ns)
         for pkg in pkglist:
             chart = Chart(app, pkg.id, namespace=ns)
             chart.add_dependency(gl)
             pkg.compile(chart)
 
-            dag[parent].append(pkg.id)
+            dag[(parent, ns)].append(pkg.id)
 
     for obj in DependencyGraph(app.node).root.outbound:
         dag = walk_dep_graph(obj, dag)
 
-    print(write_mermaid_graph(dag))
+    diff = compute_diff(app)
+    graph_str, diff_str = format_graph_and_diff(dag, dag_filename, diff)
 
     app.synth()
+
+    return graph_str, diff_str
