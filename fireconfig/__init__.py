@@ -40,13 +40,13 @@ class AppPackage(metaclass=ABCMeta):
 
 def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str]) -> T.Tuple[str, str]:
     app = App()
-    gl = Chart(app, GLOBAL_CHART_NAME)
+    gl = Chart(app, GLOBAL_CHART_NAME, disable_resource_name_hashes=True)
 
     dag = defaultdict(list)
     for ns, pkglist in pkgs.items():
         parent = add_missing_namespace(gl, ns)
         for pkg in pkglist:
-            chart = Chart(app, pkg.id, namespace=ns)
+            chart = Chart(app, pkg.id, namespace=ns, disable_resource_name_hashes=True)
             chart.add_dependency(gl)
             pkg.compile(chart)
 

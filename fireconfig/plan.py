@@ -32,7 +32,8 @@ def _node_label_for(obj: DependencyVertex):
     assert obj.value
 
     ty = type(obj.value).__name__.replace("Kube", "")
-    return f"<b>{ty}</b><br>{obj.value.node.id}"
+    name = T.cast(ApiObject, obj.value).name
+    return f"<b>{ty}</b><br>{name}"
 
 
 def compute_diff(app: App) -> T.Mapping[str, T.Any]:
