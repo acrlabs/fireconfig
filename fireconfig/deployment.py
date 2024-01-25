@@ -16,7 +16,6 @@ from fireconfig.errors import FireConfigError
 from fireconfig.types import TaintEffect
 from fireconfig.volume import VolumesBuilder
 
-
 _STANDARD_NAMESPACES = [
     'default',
     'kube-node-lease',
@@ -26,12 +25,13 @@ _STANDARD_NAMESPACES = [
 
 
 class DeploymentBuilder:
-    def __init__(self, *, namespace: str, selector: Mapping[str, str]):
+    def __init__(self, *, namespace: str, selector: Mapping[str, str], tag: Optional[str] = None):
         self._namespace = namespace
         self._annotations: MutableMapping[str, str] = {}
         self._labels: MutableMapping[str, str] = {}
         self._replicas: Union[int, Tuple[int, int]] = 1
         self._selector = selector
+        self._tag = "" if tag is None else f"{tag}-"
 
         self._pod_annotations: MutableMapping[str, str] = {}
         self._pod_labels: MutableMapping[str, str] = dict(selector)
@@ -170,7 +170,7 @@ class DeploymentBuilder:
             optional["volumes"] = list(vols.values())
 
         depl = k8s.KubeDeployment(
-            chart, "deployment",
+            chart, f"{self._tag}depl",
             metadata=k8s.ObjectMeta(**meta),
             spec=k8s.DeploymentSpec(
                 selector=k8s.LabelSelector(match_labels=self._selector),
@@ -198,7 +198,7 @@ class DeploymentBuilder:
 
     def _build_service_account(self, chart: Chart) -> k8s.KubeServiceAccount:
         return k8s.KubeServiceAccount(
-            chart, "service-account",
+            chart, f"{self._tag}sa",
             metadata={"namespace": self._namespace},
         )
 
@@ -236,6 +236,6 @@ class DeploymentBuilder:
         )
 
         if is_cluster_role:
-            return k8s.KubeClusterRoleBinding(chart, "cluster-role-binding", subjects=subjects, role_ref=role_ref)
+            return k8s.KubeClusterRoleBinding(chart, f"{self._tag}crb", subjects=subjects, role_ref=role_ref)
         else:
-            return k8s.KubeRoleBinding(chart, "role-binding", subjects=subjects, role_ref=role_ref)
+            return k8s.KubeRoleBinding(chart, f"{self._tag}rb", subjects=subjects, role_ref=role_ref)
