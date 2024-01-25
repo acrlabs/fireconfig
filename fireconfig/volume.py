@@ -12,7 +12,6 @@ from cdk8s import Chart
 
 from fireconfig import k8s
 
-
 VolumeDefsWithObject = Mapping[str, Tuple[Mapping[str, Any], Optional[ApiObject]]]
 
 

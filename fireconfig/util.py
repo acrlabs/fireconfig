@@ -1,3 +1,6 @@
+import typing as T
+
+from cdk8s import ApiObject
 from cdk8s import Chart
 from cdk8s import JsonPatch
 
@@ -38,3 +41,17 @@ def is_cluster_scoped(kind: str) -> bool:
         "ValidatingWebhookConfiguration",
         "VolumeAttachment",
     }
+
+
+def owned_name_from_dict(obj: T.Mapping[str, T.Any], chart: str) -> str:
+    prefix = obj["metadata"].get("namespace")
+    if prefix is None or is_cluster_scoped(obj["kind"]):
+        prefix = chart
+    return prefix + "/" + obj["metadata"]["name"]
+
+
+def owned_name(obj: ApiObject) -> str:
+    prefix = obj.metadata.namespace
+    if prefix is None or is_cluster_scoped(obj.kind):
+        prefix = obj.chart.node.id
+    return prefix + "/" + obj.name
