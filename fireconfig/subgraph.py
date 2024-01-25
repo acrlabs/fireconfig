@@ -11,12 +11,13 @@ class ChartSubgraph:
     def __init__(self, name: str) -> None:
         self._name = name
         self._dag: T.MutableMapping[str, T.List[str]] = defaultdict(list)
-        self._resource_types: T.MutableMapping[str, str] = {}
+        self._kinds: T.MutableMapping[str, str] = {}
         self._deleted_lines: T.Set[str] = set()
 
     def add_node(self, v: DependencyVertex) -> str:
-        name = owned_name(T.cast(ApiObject, v.value))
-        self._resource_types[name] = type(v.value).__name__.replace("Kube", "")
+        obj = T.cast(ApiObject, v.value)
+        name = owned_name(obj)
+        self._kinds[name] = obj.kind
         self._dag[name]
         return name
 
@@ -29,7 +30,7 @@ class ChartSubgraph:
         self._deleted_lines.add(l)
 
     def nodes(self) -> T.List[T.Tuple[str, str]]:
-        return [(n, self._resource_types[n]) for n in self._dag.keys()]
+        return [(n, self._kinds[n]) for n in self._dag.keys()]
 
     def edges(self) -> T.List[T.Tuple[str, str]]:
         return [(s, e) for s, l in self._dag.items() for e in l]

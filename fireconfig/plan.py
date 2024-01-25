@@ -30,6 +30,7 @@ class ResourceState(Enum):
     ChangedWithPodRecreate = "#cb4"
     Added = "#283"
     Removed = "#e67"
+    Unknown = "#f00"
 
 
 class ResourceChanges:
@@ -45,14 +46,29 @@ class ResourceChanges:
     def changes(self) -> T.List[ChangeTuple]:
         return self._changes
 
-    def update_state(self, change_type: str, path: str):
-        if self._state not in {ResourceState.Unchanged, ResourceState.Changed}:
+    def update_state(self, change_type: str, path: str, kind: T.Optional[str]):
+        if self._state in {ResourceState.Added, ResourceState.Removed}:
             return
 
-        if change_type == "dictionary_item_removed":
-            self._state = ResourceState.Removed if path == "root" else ResourceState.Changed
-        elif change_type == "dictionary_item_added":
-            self._state = ResourceState.Added if path == "root" else ResourceState.Changed
+        if path == "root":
+            if change_type == "dictionary_item_removed":
+                self._state = ResourceState.Removed
+            elif change_type == "dictionary_item_added":
+                self._state = ResourceState.Added
+            else:
+                self._state = ResourceState.Unknown
+        elif self._state == ResourceState.ChangedWithPodRecreate:
+            return
+        elif kind == "Deployment":
+            # TODO - this is obviously incomplete, it will not detect all cases
+            # when pod recreation happens
+            if (
+                path.startswith("root['spec']['template']['spec']")
+                or path.startswith("root['spec']['selector']")
+            ):
+                self._state = ResourceState.ChangedWithPodRecreate
+            else:
+                self._state = ResourceState.Changed
         else:
             self._state = ResourceState.Changed
 
@@ -60,7 +76,8 @@ class ResourceChanges:
         self._changes.append((path, r1, r2))
 
 
-def compute_diff(app: App) -> T.Mapping[str, T.Any]:
+def compute_diff(app: App) -> T.Tuple[T.Mapping[str, T.Any], T.Mapping[str, str]]:
+    kinds = {}
     old_defs = {}
     for filename in glob(f"{app.outdir}/*{app.output_file_extension}"):
         with open(filename) as f:
@@ -77,8 +94,9 @@ def compute_diff(app: App) -> T.Mapping[str, T.Any]:
         for new_obj in chart.api_objects:
             node_id = owned_name(new_obj)
             new_defs[node_id] = new_obj.to_json()
+            kinds[node_id] = new_obj.kind
 
-    return DeepDiff(old_defs, new_defs, view="tree")
+    return DeepDiff(old_defs, new_defs, view="tree"), kinds
 
 
 def walk_dep_graph(v: DependencyVertex, subgraphs: T.Mapping[str, ChartSubgraph]):
@@ -98,13 +116,13 @@ def walk_dep_graph(v: DependencyVertex, subgraphs: T.Mapping[str, ChartSubgraph]
         walk_dep_graph(dep, subgraphs)
 
 
-def get_resource_changes(diff: T.Mapping[str, T.Any]) -> T.Mapping[str, ResourceChanges]:
+def get_resource_changes(diff: T.Mapping[str, T.Any], kinds: T.Mapping[str, str]) -> T.Mapping[str, ResourceChanges]:
     resource_changes: T.MutableMapping[str, ResourceChanges] = defaultdict(lambda: ResourceChanges())
     for change_type, items in diff.items():
         for i in items:
             root_item = i.path(output_format="list")[0]
             path = re.sub(r"\[" + f"'{root_item}'" + r"\]", "", i.path())
-            resource_changes[root_item].update_state(change_type, path)
+            resource_changes[root_item].update_state(change_type, path, kinds.get(root_item))
             resource_changes[root_item].add_change(path, i.t1, i.t2)
 
     return resource_changes

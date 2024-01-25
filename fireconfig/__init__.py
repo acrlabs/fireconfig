@@ -63,8 +63,8 @@ def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str]
 
     for obj in DependencyGraph(app.node).root.outbound:
         walk_dep_graph(obj, subgraphs)
-    diff = compute_diff(app)
-    resource_changes = get_resource_changes(diff)
+    diff, kinds = compute_diff(app)
+    resource_changes = get_resource_changes(diff, kinds)
 
     try:
         find_deleted_nodes(subgraphs, resource_changes, dag_filename)
@@ -74,6 +74,6 @@ def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str]
     graph_str = format_mermaid_graph(subgraph_dag, subgraphs, dag_filename, resource_changes)
     diff_str = format_diff(resource_changes)
 
-    app.synth()
+    # app.synth()
 
     return graph_str, diff_str

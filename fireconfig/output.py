@@ -12,9 +12,9 @@ from fireconfig.plan import ResourceState
 from fireconfig.subgraph import ChartSubgraph
 
 
-def _format_node_label(n: str, ty: str) -> str:
-    name = n.split("/")[-1]
-    return f"  {n}[<b>{ty}</b><br>{name}]\n"
+def _format_node_label(node: str, kind: str) -> str:
+    name = node.split("/")[-1]
+    return f"  {node}[<b>{kind}</b><br>{name}]\n"
 
 
 def format_mermaid_graph(
@@ -34,8 +34,8 @@ def format_mermaid_graph(
     for chart, sg in subgraphs.items():
         mermaid += f"subgraph {chart}\n"
         mermaid += "  direction LR\n"
-        for n, ty in sg.nodes():
-            mermaid += _format_node_label(n, ty)
+        for n, k in sg.nodes():
+            mermaid += _format_node_label(n, k)
 
         for s, e in sg.edges():
             mermaid += f"  {s}--->{e}\n"
