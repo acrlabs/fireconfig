@@ -16,6 +16,7 @@ from fireconfig.output import format_graph_and_diff
 from fireconfig.plan import GLOBAL_CHART_NAME
 from fireconfig.plan import compute_diff
 from fireconfig.plan import walk_dep_graph
+from fireconfig.util import fix_cluster_scoped_objects
 from fireconfig.volume import VolumesBuilder
 
 __all__ = [
@@ -48,6 +49,8 @@ def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str]
             chart = Chart(app, pkg.id, namespace=ns)
             chart.add_dependency(gl)
             pkg.compile(chart)
+
+            fix_cluster_scoped_objects(chart)
 
             dag[(parent, ns)].append(pkg.id)
 

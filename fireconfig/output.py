@@ -1,5 +1,6 @@
 import re
 import typing as T
+from collections import defaultdict
 from enum import Enum
 
 import simplejson as json
@@ -70,6 +71,7 @@ def format_graph_and_diff(dag: DAG, old_dag_filename: T.Optional[str], diff: T.M
         except Exception as e:
             print(f"WARNING: {e}\nCould not read old DAG file, graph may be missing deleted nodes")
 
+    grouped_diff_objects: T.MutableMapping[str, str] = defaultdict(str)
     for change_type, items in diff.items():
         for i in items:
             root_item = i.path(output_format="list")[0]
@@ -82,8 +84,7 @@ def format_graph_and_diff(dag: DAG, old_dag_filename: T.Optional[str], diff: T.M
                         deleted_obj_lines.add(l)
             obj1_str = json.dumps(i.t1, indent='  ') if i.t1 != notpresent else i.t1
             obj2_str = json.dumps(i.t2, indent='  ') if i.t2 != notpresent else i.t2
-            diff_details += f"<details><summary>\n\n#### {root_item}: {node_state.name}\n\n</summary>\n\n"
-            diff_details += f"```\n{path}:\n{obj1_str} --> {obj2_str}\n```\n\n</details>\n"
+            grouped_diff_objects[root_item] += f"```\n{path}:\n{obj1_str} --> {obj2_str}\n```\n\n"
 
     mermaid += f"{_DELETED_OBJS_START}\n"
     for del_line in deleted_obj_lines:
@@ -95,5 +96,11 @@ def format_graph_and_diff(dag: DAG, old_dag_filename: T.Optional[str], diff: T.M
         mermaid += f"  style {key} fill:{state.value},color:#000\n"
     mermaid += f"{_STYLE_DEFS_END}\n"
     mermaid += "```\n\n"
+
+    diff_details = ""
+    for item, detail_str in sorted(grouped_diff_objects.items()):
+        diff_details += f"<details><summary>\n\n#### {item}: {node_states[item].name}\n\n</summary>\n\n"
+        diff_details += detail_str
+        diff_details += "</details>"
 
     return mermaid, diff_details

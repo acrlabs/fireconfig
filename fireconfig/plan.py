@@ -3,18 +3,36 @@ import typing as T
 from glob import glob
 
 import yaml
+from cdk8s import ApiObject
 from cdk8s import App
 from cdk8s import DependencyVertex
 from deepdiff import DeepDiff  # type: ignore
 
-from fireconfig import k8s
+from fireconfig.util import is_cluster_scoped
 
 DAG = T.MutableMapping[T.Tuple[str, str], T.List[str]]
 GLOBAL_CHART_NAME = "global"
 
 
-def _namespaced_or_chart_name(obj: T.Mapping[str, T.Any], chart: str) -> str:
-    return obj["metadata"].get("namespace", chart) + "/" + obj["metadata"]["name"]
+def _namespaced_or_chart_name_from_dict(obj: T.Mapping[str, T.Any], chart: str) -> str:
+    prefix = obj["metadata"].get("namespace")
+    if prefix is None or is_cluster_scoped(obj["kind"]):
+        prefix = chart
+    return prefix + "/" + obj["metadata"]["name"]
+
+
+def _namespaced_or_chart_name(obj: ApiObject) -> str:
+    prefix = obj.metadata.namespace
+    if prefix is None or is_cluster_scoped(obj.kind):
+        prefix = obj.chart.node.id
+    return prefix + "/" + obj.name
+
+
+def _node_label_for(obj: DependencyVertex):
+    assert obj.value
+
+    ty = type(obj.value).__name__.replace("Kube", "")
+    return f"<b>{ty}</b><br>{obj.value.node.id}"
 
 
 def compute_diff(app: App) -> T.Mapping[str, T.Any]:
@@ -26,24 +44,16 @@ def compute_diff(app: App) -> T.Mapping[str, T.Any]:
             if parsed_filename:
                 old_chart = parsed_filename.group(2)
             for old_obj in yaml.safe_load_all(f):
-                node_id = _namespaced_or_chart_name(old_obj, old_chart)
+                node_id = _namespaced_or_chart_name_from_dict(old_obj, old_chart)
                 old_defs[node_id] = old_obj
 
     new_defs = {}
     for chart in app.charts:
-        for new_obj in chart.to_json():
-            node_id = _namespaced_or_chart_name(new_obj, chart.node.id)
-            new_defs[node_id] = new_obj
+        for new_obj in chart.api_objects:
+            node_id = _namespaced_or_chart_name(new_obj)
+            new_defs[node_id] = new_obj.to_json()
 
     return DeepDiff(old_defs, new_defs, view="tree")
-
-
-def _vert_id(v):
-    if v.value.metadata.namespace:
-        return f"{v.value.metadata.namespace}/{v.value.name}"
-    elif isinstance(v.value, k8s.KubeNamespace):
-        return f"{GLOBAL_CHART_NAME}/{v.value.name}"
-    return v.value.name
 
 
 def walk_dep_graph(v: DependencyVertex, dag: DAG):
@@ -51,17 +61,18 @@ def walk_dep_graph(v: DependencyVertex, dag: DAG):
     if not hasattr(v.value, "chart"):
         return dag
 
-    vid = _vert_id(v)
-    label = v.value.node.id
-    dag[(vid, label)]
+    vid = _namespaced_or_chart_name(T.cast(ApiObject, v.value))
+    label = _node_label_for(v)
+    dag[(vid, label)]  # defaultdict, so this creates the entry if it doesn't exist
+
     if len(v.outbound) == 0:
         chart = v.value.chart.node.id  # type: ignore
         dag[(chart, chart)].append(vid)
 
     for dep in v.outbound:
         assert dep.value
-        dep_vid = _vert_id(dep)
-        dep_label = dep.value.node.id
+        dep_vid = _namespaced_or_chart_name(T.cast(ApiObject, dep.value))
+        dep_label = _node_label_for(dep)
         dag[(dep_vid, dep_label)].append(vid)
         dag = walk_dep_graph(dep, dag)
 
