@@ -1,3 +1,6 @@
 [flake8]
 max-line-length = 121
-ignore = E121,E123,E126,E226,E24,E704,W503,W504,E702,E703,E741,W605
+extend-ignore = E702,E703,E741,W605,E124,E128
+extend-exclude = fireconfig/k8s/*
+
+# vim:ft=dosini

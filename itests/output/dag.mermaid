@@ -1,0 +1,33 @@
+```mermaid
+%%{init: {'themeVariables': {'mainBkg': '#ddd'}}}%%
+graph LR
+
+classDef default color:#000
+subgraph global
+  direction LR
+  global/the-namespace[<b>Namespace</b><br>the-namespace]
+%% DELETED OBJECTS START
+%% DELETED OBJECTS END
+end
+
+subgraph fc-test-package
+  direction LR
+  the-namespace/deployment1-svc[<b>Service</b><br>deployment1-svc]
+  the-namespace/fc-test-package-depl[<b>Deployment</b><br>fc-test-package-depl]
+  the-namespace/fc-test-package-sa[<b>ServiceAccount</b><br>fc-test-package-sa]
+  fc-test-package/fc-test-package-crb[<b>ClusterRoleBinding</b><br>fc-test-package-crb]
+  the-namespace/fc-test-package-the-volume-name[<b>ConfigMap</b><br>fc-test-package-the-volume-name]
+  the-namespace/fc-test-package-other_name[<b>ConfigMap</b><br>fc-test-package-other_name]
+  the-namespace/fc-test-package-sa--->the-namespace/fc-test-package-depl
+  fc-test-package/fc-test-package-crb--->the-namespace/fc-test-package-depl
+  the-namespace/fc-test-package-the-volume-name--->the-namespace/fc-test-package-depl
+  the-namespace/fc-test-package-other_name--->the-namespace/fc-test-package-depl
+%% DELETED OBJECTS START
+%% DELETED OBJECTS END
+end
+
+global--->fc-test-package
+
+%% STYLE DEFINITIONS START
+%% STYLE DEFINITIONS END
+```

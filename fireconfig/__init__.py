@@ -42,8 +42,13 @@ class AppPackage(metaclass=ABCMeta):
         ...
 
 
-def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str] = None) -> T.Tuple[str, str]:
-    app = App()
+def compile(
+    pkgs: T.Dict[str, T.List[AppPackage]],
+    dag_filename: T.Optional[str] = None,
+    cdk8s_outdir: T.Optional[str] = None,
+    dry_run: bool = False,
+) -> T.Tuple[str, str]:
+    app = App(outdir=cdk8s_outdir)
     gl = Chart(app, GLOBAL_CHART_NAME, disable_resource_name_hashes=True)
 
     subgraph_dag = defaultdict(list)
@@ -74,6 +79,7 @@ def compile(pkgs: T.Dict[str, T.List[AppPackage]], dag_filename: T.Optional[str]
     graph_str = format_mermaid_graph(subgraph_dag, subgraphs, dag_filename, resource_changes)
     diff_str = format_diff(resource_changes)
 
-    # app.synth()
+    if not dry_run:
+        app.synth()
 
     return graph_str, diff_str
