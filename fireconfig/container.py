@@ -1,10 +1,4 @@
-from typing import Any
-from typing import Dict
-from typing import Mapping
-from typing import Optional
-from typing import Self
-from typing import Sequence
-from typing import Set
+import typing as T
 
 from cdk8s import Chart
 
@@ -17,52 +11,52 @@ from fireconfig.volume import VolumesBuilder
 
 
 class ContainerBuilder:
-    def __init__(self, name: str, image: str, command: Optional[str] = None, args: Optional[Sequence[str]] = None):
+    def __init__(self, name: str, image: str, command: T.Optional[str] = None, args: T.Optional[T.Sequence[str]] = None):
         self._name = name
         self._image = image
 
         self._args = args
         self._command = command
-        self._env: Optional[EnvBuilder] = None
-        self._env_names: Optional[Sequence[str]] = None
-        self._resources: Optional[Resources] = None
-        self._ports: Sequence[int] = []
-        self._volumes: Optional[VolumesBuilder] = None
-        self._volume_names: Optional[Sequence[str]] = None
-        self._capabilities: Set[Capability] = set()
+        self._env: T.Optional[EnvBuilder] = None
+        self._env_names: T.Optional[T.Sequence[str]] = None
+        self._resources: T.Optional[Resources] = None
+        self._ports: T.Sequence[int] = []
+        self._volumes: T.Optional[VolumesBuilder] = None
+        self._volume_names: T.Optional[T.Sequence[str]] = None
+        self._capabilities: T.Set[Capability] = set()
 
     @property
-    def ports(self) -> Sequence[int]:
+    def ports(self) -> T.Sequence[int]:
         return self._ports
 
-    def with_env(self, env: EnvBuilder, names: Optional[Sequence[str]] = None) -> Self:
+    def with_env(self, env: EnvBuilder, names: T.Optional[T.Sequence[str]] = None) -> T.Self:
         self._env = env
         self._env_names = names
         return self
 
     def with_resources(
         self, *,
-        requests: Optional[Mapping[str, Any]] = None,
-        limits: Optional[Mapping[str, Any]] = None,
-    ) -> Self:
+        requests: T.Optional[T.Mapping[str, T.Any]] = None,
+        limits: T.Optional[T.Mapping[str, T.Any]] = None,
+    ) -> T.Self:
         self._resources = Resources(requests, limits)
         return self
 
-    def with_ports(self, *ports: int) -> Self:
+    def with_ports(self, *ports: int) -> T.Self:
         self._ports = ports
         return self
 
-    def with_security_context(self, capability: Capability) -> Self:
+    def with_security_context(self, capability: Capability) -> T.Self:
         self._capabilities.add(capability)
         return self
 
-    def with_volumes(self, volumes: VolumesBuilder, names: Optional[Sequence[str]] = None) -> Self:
+    def with_volumes(self, volumes: VolumesBuilder, names: T.Optional[T.Sequence[str]] = None) -> T.Self:
         self._volumes = volumes
         self._volume_names = names
         return self
 
     def build(self) -> k8s.Container:
-        optional: Dict[str, Any] = {}
+        optional: T.MutableMapping[str, T.Any] = {}
         if self._command:
             optional["command"] = [self._command]
         if self._args:

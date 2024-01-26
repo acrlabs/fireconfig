@@ -1,11 +1,4 @@
-from typing import Any
-from typing import List
-from typing import Mapping
-from typing import MutableMapping
-from typing import Optional
-from typing import Self
-from typing import Tuple
-from typing import Union
+import typing as T
 
 from cdk8s import Chart
 from cdk8s import JsonPatch
@@ -21,31 +14,31 @@ _APP_LABEL_KEY = "fireconfig.io/app"
 
 
 class DeploymentBuilder(ObjectBuilder):
-    def __init__(self, *, app_label: str, tag: Optional[str] = None):
+    def __init__(self, *, app_label: str, tag: T.Optional[str] = None):
         super().__init__()
 
-        self._replicas: Union[int, Tuple[int, int]] = 1
+        self._replicas: T.Union[int, T.Tuple[int, int]] = 1
         self._app_label = app_label
         self._selector = {_APP_LABEL_KEY: app_label}
         self._tag = "" if tag is None else f"{tag}-"
 
-        self._pod_annotations: MutableMapping[str, str] = {}
-        self._pod_labels: MutableMapping[str, str] = dict(self._selector)
-        self._containers: List[ContainerBuilder] = []
-        self._node_selector: Optional[Mapping[str, str]] = None
-        self._service_account_role: Optional[str] = None
+        self._pod_annotations: T.MutableMapping[str, str] = {}
+        self._pod_labels: T.MutableMapping[str, str] = dict(self._selector)
+        self._containers: T.List[ContainerBuilder] = []
+        self._node_selector: T.Optional[T.Mapping[str, str]] = None
+        self._service_account_role: T.Optional[str] = None
         self._service_account_role_is_cluster_role: bool = False
         self._service: bool = False
         self._service_name: str = f"{self._app_label}-svc"
-        self._service_ports: Optional[List[int]] = None
-        self._tolerations: List[Tuple[str, str, TaintEffect]] = []
-        self._volumes: Optional[VolumesBuilder] = None
+        self._service_ports: T.Optional[T.List[int]] = None
+        self._tolerations: T.List[T.Tuple[str, str, TaintEffect]] = []
+        self._volumes: T.Optional[VolumesBuilder] = None
 
     @property
     def service_name(self) -> str:
         return self._service_name
 
-    def with_replicas(self, min_replicas: int, max_replicas: Optional[int] = None) -> Self:
+    def with_replicas(self, min_replicas: int, max_replicas: T.Optional[int] = None) -> T.Self:
         if max_replicas is not None:
             if min_replicas > max_replicas:
                 raise ValueError(f'min_replicas cannot be larger than max_replicas: {min_replicas} > {max_replicas}')
@@ -54,50 +47,50 @@ class DeploymentBuilder(ObjectBuilder):
             self._replicas = min_replicas
         return self
 
-    def with_pod_annotation(self, key: str, value: str) -> Self:
+    def with_pod_annotation(self, key: str, value: str) -> T.Self:
         self._pod_annotations[key] = value
         return self
 
-    def with_pod_label(self, key: str, value: str) -> Self:
+    def with_pod_label(self, key: str, value: str) -> T.Self:
         self._pod_labels[key] = value
         return self
 
-    def with_containers(self, *containers: ContainerBuilder) -> Self:
+    def with_containers(self, *containers: ContainerBuilder) -> T.Self:
         self._containers.extend(containers)
         return self
 
-    def with_node_selector(self, key: str, value: str) -> Self:
+    def with_node_selector(self, key: str, value: str) -> T.Self:
         self._node_selector = {key: value}
         return self
 
-    def with_service(self, ports: Optional[List[int]] = None) -> Self:
+    def with_service(self, ports: T.Optional[T.List[int]] = None) -> T.Self:
         self._service = True
         self._service_ports = ports
         return self
 
-    def with_service_account_and_role_binding(self, role_name: str, is_cluster_role: bool = False) -> Self:
+    def with_service_account_and_role_binding(self, role_name: str, is_cluster_role: bool = False) -> T.Self:
         self._service_account_role = role_name
         self._service_account_role_is_cluster_role = is_cluster_role
         return self
 
-    def with_toleration(self, key: str, value: str = "", effect: TaintEffect = TaintEffect.NoExecute) -> Self:
+    def with_toleration(self, key: str, value: str = "", effect: TaintEffect = TaintEffect.NoExecute) -> T.Self:
         self._tolerations.append((key, value, effect))
         return self
 
     def _build(self, meta: k8s.ObjectMeta, chart: Chart) -> k8s.KubeDeployment:
         # TODO auto-add app key
-        pod_meta: MutableMapping[str, Any] = {}
+        pod_meta: T.MutableMapping[str, T.Any] = {}
         if self._pod_annotations:
             pod_meta["annotations"] = self._pod_annotations
         pod_meta["labels"] = self._pod_labels
 
         if type(self._replicas) is tuple:
-            replicas: Optional[int] = None
+            replicas: T.Optional[int] = None
             raise NotImplementedError("No support for HPA currently")
         else:
             replicas = self._replicas  # type: ignore
 
-        optional: MutableMapping[str, Any] = {}
+        optional: T.MutableMapping[str, T.Any] = {}
         if self._node_selector is not None:
             optional["node_selector"] = self._node_selector
 
@@ -182,7 +175,7 @@ class DeploymentBuilder(ObjectBuilder):
         service_account: k8s.KubeServiceAccount,
         role_name: str,
         is_cluster_role: bool,
-    ) -> Union[k8s.KubeClusterRoleBinding, k8s.KubeRoleBinding]:
+    ) -> T.Union[k8s.KubeClusterRoleBinding, k8s.KubeRoleBinding]:
 
         subjects = [k8s.Subject(
             kind="ServiceAccount",

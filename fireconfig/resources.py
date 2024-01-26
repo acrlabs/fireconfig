@@ -1,13 +1,10 @@
-from typing import Mapping
-from typing import MutableMapping
-from typing import Optional
-from typing import Union
+import typing as T
 
 from fireconfig import k8s
 
-ResourceMap = Mapping[str, Union[int, str]]
-QuantityMap = Mapping[str, k8s.Quantity]
-MutableQuantityMap = MutableMapping[str, k8s.Quantity]
+ResourceMap = T.Mapping[str, T.Union[int, str]]
+QuantityMap = T.Mapping[str, k8s.Quantity]
+MutableQuantityMap = T.MutableMapping[str, k8s.Quantity]
 
 
 def parse_resource_map(m: ResourceMap) -> QuantityMap:
@@ -22,9 +19,9 @@ def parse_resource_map(m: ResourceMap) -> QuantityMap:
 
 
 class Resources:
-    def __init__(self, requests: Optional[ResourceMap], limits: Optional[ResourceMap]):
-        self.requests: Optional[QuantityMap] = None
-        self.limits: Optional[QuantityMap] = None
+    def __init__(self, requests: T.Optional[ResourceMap], limits: T.Optional[ResourceMap]):
+        self.requests: T.Optional[QuantityMap] = None
+        self.limits: T.Optional[QuantityMap] = None
 
         if requests is not None:
             self.requests = parse_resource_map(requests)

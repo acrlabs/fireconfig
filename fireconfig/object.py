@@ -1,9 +1,6 @@
+import typing as T
 from abc import ABCMeta
 from abc import abstractmethod
-from typing import Any
-from typing import List
-from typing import MutableMapping
-from typing import Self
 
 from cdk8s import ApiObject
 from cdk8s import Chart
@@ -12,25 +9,25 @@ from fireconfig import k8s
 
 
 class ObjectBuilder(metaclass=ABCMeta):
-    def __init__(self: Self):
-        self._annotations: MutableMapping[str, str] = {}
-        self._labels: MutableMapping[str, str] = {}
-        self._deps: List[ApiObject] = []
+    def __init__(self: T.Self):
+        self._annotations: T.MutableMapping[str, str] = {}
+        self._labels: T.MutableMapping[str, str] = {}
+        self._deps: T.List[ApiObject] = []
 
-    def with_annotation(self, key: str, value: str) -> Self:
+    def with_annotation(self, key: str, value: str) -> T.Self:
         self._annotations[key] = value
         return self
 
-    def with_label(self, key: str, value: str) -> Self:
+    def with_label(self, key: str, value: str) -> T.Self:
         self._labels[key] = value
         return self
 
-    def with_dependencies(self, *deps: ApiObject) -> Self:
+    def with_dependencies(self, *deps: ApiObject) -> T.Self:
         self._deps.extend(deps)
         return self
 
     def build(self, chart: Chart):
-        meta: MutableMapping[str, Any] = {}
+        meta: T.MutableMapping[str, T.Any] = {}
         if self._annotations:
             meta["annotations"] = self._annotations
         if self._labels:

@@ -1,26 +1,19 @@
-from typing import Any
-from typing import Iterable
-from typing import Mapping
-from typing import MutableMapping
-from typing import Optional
-from typing import Self
-from typing import Sequence
-from typing import Tuple
+import typing as T
 
 from cdk8s import ApiObject
 from cdk8s import Chart
 
 from fireconfig import k8s
 
-VolumeDefsWithObject = Mapping[str, Tuple[Mapping[str, Any], Optional[ApiObject]]]
+VolumeDefsWithObject = T.Mapping[str, T.Tuple[T.Mapping[str, T.Any], T.Optional[ApiObject]]]
 
 
 class VolumesBuilder:
     def __init__(self) -> None:
-        self._volume_mounts: MutableMapping[str, str] = {}
-        self._config_map_data: MutableMapping[str, Mapping[str, str]] = {}
+        self._volume_mounts: T.MutableMapping[str, str] = {}
+        self._config_map_data: T.MutableMapping[str, T.Mapping[str, str]] = {}
 
-    def with_config_map(self, vol_name: str, mount_path: str, data: Mapping[str, str]) -> Self:
+    def with_config_map(self, vol_name: str, mount_path: str, data: T.Mapping[str, str]) -> T.Self:
         self._config_map_data[vol_name] = data
         self._volume_mounts[vol_name] = mount_path
         return self
@@ -30,13 +23,13 @@ class VolumesBuilder:
         path = self._volume_mounts[vol_name] + '/' + path_name
         return path
 
-    def build_mounts(self, names: Optional[Iterable[str]] = None) -> Sequence[Mapping]:
+    def build_mounts(self, names: T.Optional[T.Iterable[str]] = None) -> T.Sequence[T.Mapping]:
         if names is None:
             names = self._volume_mounts.keys()
 
         return [{"name": name, "mountPath": self._volume_mounts[name]} for name in names]
 
-    def build_volumes(self, chart: Chart, names: Optional[Iterable[str]] = None) -> VolumeDefsWithObject:
+    def build_volumes(self, chart: Chart, names: T.Optional[T.Iterable[str]] = None) -> VolumeDefsWithObject:
         if names is None:
             names = self._volume_mounts.keys()
 
