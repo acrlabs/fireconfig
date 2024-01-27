@@ -6,11 +6,14 @@ repos:
     hooks:
       - id: end-of-file-fixer
       - id: check-yaml
+        args: ["--allow-multiple-documents"]
       - id: trailing-whitespace
-  - repo: https://github.com/asottile/reorder-python-imports
-    rev: v3.10.0
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
     hooks:
-      - id: reorder-python-imports
+      - id: isort
+        args:
+          - --sl
   - repo: https://github.com/PyCQA/flake8
     rev: 6.0.0
     hooks:
@@ -19,4 +22,4 @@ repos:
     rev: v1.4.1
     hooks:
       - id: mypy
-        additional_dependencies: [cdk8s]
+        additional_dependencies: [cdk8s, types-simplejson, types-pyyaml]

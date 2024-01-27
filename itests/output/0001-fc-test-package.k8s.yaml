@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: deployment1-svc
+  namespace: the-namespace
+spec:
+  ports:
+    - port: 8086
+      targetPort: 8086
+  selector:
+    fireconfig.io/app: deployment1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fc-test-package-sa
+  namespace: the-namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fc-test-package-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: fc-test-package-sa
+    namespace: the-namespace
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fc-test-package-the-volume-name
+  namespace: the-namespace
+data:
+  foo.yml: bar
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fc-test-package-other_name
+  namespace: the-namespace
+data:
+  bar.yml: asdf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-test-package-depl
+  namespace: the-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      fireconfig.io/app: deployment1
+  template:
+    metadata:
+      labels:
+        fireconfig.io/app: deployment1
+    spec:
+      containers:
+        - args:
+            - /run.sh
+          env:
+            - name: POD_OWNER
+              value: fc-test-package-depl
+          image: test:latest
+          name: container1
+          ports:
+            - containerPort: 8086
+          securityContext:
+            capabilities:
+              add:
+                - SYS_PTRACE
+          volumeMounts:
+            - mountPath: /mount/path
+              name: the-volume-name
+            - mountPath: /mount/path
+              name: other_name
+      nodeSelector:
+        type: kind-worker
+      serviceAccountName: fc-test-package-sa
+      volumes:
+        - configMap:
+            items:
+              - key: foo.yml
+                path: foo.yml
+            name: fc-test-package-the-volume-name
+          name: the-volume-name
+        - configMap:
+            items:
+              - key: bar.yml
+                path: bar.yml
+            name: fc-test-package-other_name
+          name: other_name
