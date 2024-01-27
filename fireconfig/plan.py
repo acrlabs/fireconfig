@@ -1,3 +1,13 @@
+"""
+The bulk of the logic for computing the plan (a la terraform plan) lives in this file.
+The rough outline of steps taken is
+
+1. For each chart, walk the dependency graph to construct a DAG (`walk_dep_graph`)
+2. Compute a diff between the newly-generated manifests and the old ones (`compute_diff`)
+3. Turn that diff into a list of per-resource changes (`get_resource_changes`)
+4. Find out what's been deleted since the last run and add that into the graph (`find_deleted_nodes`)
+"""
+
 import re
 import typing as T
 from collections import defaultdict
@@ -47,6 +57,20 @@ class ResourceChanges:
         return self._changes
 
     def update_state(self, change_type: str, path: str, kind: T.Optional[str]):
+        """
+        Given a particular resource, update the state (added, removed, changed, etc) for
+        that resource.  We use the list of "change types" from DeepDiff defined here:
+
+        https://github.com/seperman/deepdiff/blob/89c5cc227c48b63be4a0e1ad4af59d3c1b0272d7/deepdiff/serialization.py#L388
+
+        Since these are Kubernetes objects, we expect the root object to be a dictionary, if it's
+        not, something has gone horribly wrong.  If the root object was added or removed, we mark the
+        entire object as added or removed; otherwise if some sub-dictionary was added or removed,
+        the root object was just "changed".
+
+        We use the `kind` field to determine whether pod recreation needs to happen.  This entire
+        function is currently very hacky and incomplete, it would be good to make this more robust sometime.
+        """
         if self._state in {ResourceState.Added, ResourceState.Removed}:
             return
 
@@ -77,6 +101,11 @@ class ResourceChanges:
 
 
 def compute_diff(app: App) -> T.Tuple[T.Mapping[str, T.Any], T.Mapping[str, str]]:
+    """
+    To compute a diff, we look at the old YAML files that were written out "last time", and
+    compare them to the generated YAML by cdk8s "this time".
+    """
+
     kinds = {}
     old_defs = {}
     for filename in glob(f"{app.outdir}/*{app.output_file_extension}"):
@@ -112,6 +141,8 @@ def walk_dep_graph(v: DependencyVertex, subgraphs: T.Mapping[str, ChartSubgraph]
         if not hasattr(v.value, "chart"):
             return
 
+        # Note that cdk8s does things backwards, so instead of adding the edge from v->dep,
+        # we add an edge from dep->v
         subgraphs[chart].add_edge(dep, v)
         walk_dep_graph(dep, subgraphs)
 
@@ -133,6 +164,14 @@ def find_deleted_nodes(
     resource_changes: T.Mapping[str, ResourceChanges],
     old_dag_filename: T.Optional[str],
 ):
+    """
+    To determine the location and connections of deleted nodes in the DAG,
+    we just look at the old DAG file and copy out the edge lines that contain the
+    removed objects.  The DAG file is split into subgraphs, so we parse it line-by-line
+    and only copy entries that are a) inside a subgraph block, and b) weren't marked as
+    deleted "last time".  We use special comment markers in the DAG file to tell which
+    things were deleted "last time".
+    """
     if not old_dag_filename:
         return
 

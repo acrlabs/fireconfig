@@ -152,6 +152,7 @@ class DeploymentBuilder(ObjectBuilder):
 
         return depl
 
+    # TODO maybe move these into separate files at some point?
     def _build_service_account(self, chart: Chart) -> k8s.KubeServiceAccount:
         return k8s.KubeServiceAccount(chart, f"{self._tag}sa")
 
