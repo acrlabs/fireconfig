@@ -15,11 +15,11 @@ _APP_LABEL_KEY = "fireconfig.io/app"
 
 class DeploymentBuilder(ObjectBuilder):
     def __init__(self, *, app_label: str, tag: T.Optional[str] = None):
-        super().__init__()
+        self._selector = {_APP_LABEL_KEY: app_label}
+        super().__init__(labels=self._selector)
 
         self._replicas: T.Union[int, T.Tuple[int, int]] = 1
         self._app_label = app_label
-        self._selector = {_APP_LABEL_KEY: app_label}
         self._tag = "" if tag is None else f"{tag}-"
 
         self._pod_annotations: T.MutableMapping[str, str] = {}
@@ -78,7 +78,6 @@ class DeploymentBuilder(ObjectBuilder):
         return self
 
     def _build(self, meta: k8s.ObjectMeta, chart: Chart) -> k8s.KubeDeployment:
-        # TODO auto-add app key
         pod_meta: T.MutableMapping[str, T.Any] = {}
         if self._pod_annotations:
             pod_meta["annotations"] = self._pod_annotations
