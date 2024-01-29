@@ -181,10 +181,10 @@ def find_deleted_nodes(
         del_lines = False
 
         for l in f.readlines():
-            chart_match = re.match("^\s*subgraph (.*)", l)
+            chart_match = re.match(r"^\s*subgraph (.*)", l)
             if chart_match:
                 current_chart = chart_match.group(1)
-            elif re.match("^\s*end$", l):
+            elif re.match(r"^\s*end$", l):
                 current_chart = None
             if l.startswith(DELETED_OBJS_START):
                 del_lines = True

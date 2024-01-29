@@ -44,7 +44,8 @@ def test_deployment():
     dag, diff = fire.compile(
         {"the-namespace": [FCTestPackage()]},
         dag_filename=old_dag_filename,
-        cdk8s_outdir=OUTPUT_DIR
+        cdk8s_outdir=OUTPUT_DIR,
+        dry_run=True,
     )
 
     assert diff == ""

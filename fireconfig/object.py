@@ -9,9 +9,13 @@ from fireconfig import k8s
 
 
 class ObjectBuilder(metaclass=ABCMeta):
-    def __init__(self: T.Self):
-        self._annotations: T.MutableMapping[str, str] = {}
-        self._labels: T.MutableMapping[str, str] = {}
+    def __init__(
+        self: T.Self,
+        annotations: T.MutableMapping[str, T.Any] = dict(),
+        labels: T.MutableMapping[str, T.Any] = dict(),
+    ):
+        self._annotations: T.MutableMapping[str, str] = annotations
+        self._labels: T.MutableMapping[str, str] = labels
         self._deps: T.List[ApiObject] = []
 
     def with_annotation(self, key: str, value: str) -> T.Self:

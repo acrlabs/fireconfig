@@ -48,6 +48,8 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    fireconfig.io/app: deployment1
   name: fc-test-package-depl
   namespace: the-namespace
 spec:
