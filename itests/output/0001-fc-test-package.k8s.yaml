@@ -8,7 +8,7 @@ spec:
     - port: 8086
       targetPort: 8086
   selector:
-    fireconfig.io/app: deployment1
+    app.kubernetes.io/name: deployment1
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -49,18 +49,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    fireconfig.io/app: deployment1
+    app.kubernetes.io/name: deployment1
   name: fc-test-package-depl
   namespace: the-namespace
 spec:
   replicas: 1
   selector:
     matchLabels:
-      fireconfig.io/app: deployment1
+      app.kubernetes.io/name: deployment1
   template:
     metadata:
       labels:
-        fireconfig.io/app: deployment1
+        app.kubernetes.io/name: deployment1
     spec:
       containers:
         - args:
