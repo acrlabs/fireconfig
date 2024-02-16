@@ -10,7 +10,7 @@ from fireconfig.types import TaintEffect
 from fireconfig.volume import VolumeDefsWithObject
 from fireconfig.volume import VolumesBuilder
 
-_APP_LABEL_KEY = "fireconfig.io/app"
+_APP_LABEL_KEY = "app.kubernetes.io/name"
 
 
 class DeploymentBuilder(ObjectBuilder):
