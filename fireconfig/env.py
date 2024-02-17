@@ -17,6 +17,10 @@ class EnvBuilder:
         self._env[name] = ("valueFrom", {"fieldRef": {"fieldPath": field_str}})
         return self
 
+    def with_secret(self, name: str, secret_name: str, secret_key_name: str) -> T.Self:
+        self._env[name] = ("valueFrom", {"secretKeyRef": {"name": secret_name, "key": secret_key_name}})
+        return self
+
     def build(self, names: T.Optional[T.Union[T.Sequence[str], T.KeysView[str]]] = None) -> T.Sequence[T.Mapping]:
         if names is None:
             names = self._env.keys()
