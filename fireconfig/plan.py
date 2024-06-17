@@ -86,10 +86,7 @@ class ResourceChanges:
         elif kind == "Deployment":
             # TODO - this is obviously incomplete, it will not detect all cases
             # when pod recreation happens
-            if (
-                path.startswith("root['spec']['template']['spec']")
-                or path.startswith("root['spec']['selector']")
-            ):
+            if path.startswith("root['spec']['template']['spec']") or path.startswith("root['spec']['selector']"):
                 self._state = ResourceState.ChangedWithPodRecreate
             else:
                 self._state = ResourceState.Changed
@@ -109,7 +106,7 @@ def compute_diff(app: App) -> T.Tuple[T.Mapping[str, T.Any], T.Mapping[str, str]
     kinds = {}
     old_defs = {}
     for filename in glob(f"{app.outdir}/*{app.output_file_extension}"):
-        with open(filename) as f:
+        with open(filename, encoding="utf-8") as f:
             parsed_filename = re.match(app.outdir + r"\/(\d{4}-)?(.*)" + app.output_file_extension, filename)
             old_chart = "UNKNOWN"
             if parsed_filename:
@@ -148,7 +145,7 @@ def walk_dep_graph(v: DependencyVertex, subgraphs: T.Mapping[str, ChartSubgraph]
 
 
 def get_resource_changes(diff: T.Mapping[str, T.Any], kinds: T.Mapping[str, str]) -> T.Mapping[str, ResourceChanges]:
-    resource_changes: T.MutableMapping[str, ResourceChanges] = defaultdict(lambda: ResourceChanges())
+    resource_changes: T.MutableMapping[str, ResourceChanges] = defaultdict(ResourceChanges)
     for change_type, items in diff.items():
         for i in items:
             root_item = i.path(output_format="list")[0]
@@ -176,25 +173,25 @@ def find_deleted_nodes(
         return
 
     old_dag_lines = []
-    with open(old_dag_filename) as f:
+    with open(old_dag_filename, encoding="utf-8") as f:
         current_chart = None
         del_lines = False
 
-        for l in f.readlines():
-            chart_match = re.match(r"^\s*subgraph (.*)", l)
+        for ln in f.readlines():
+            chart_match = re.match(r"^\s*subgraph (.*)", ln)
             if chart_match:
                 current_chart = chart_match.group(1)
-            elif re.match(r"^\s*end$", l):
+            elif re.match(r"^\s*end$", ln):
                 current_chart = None
-            if l.startswith(DELETED_OBJS_START):
+            if ln.startswith(DELETED_OBJS_START):
                 del_lines = True
-            elif l.startswith(DELETED_OBJS_END):
+            elif ln.startswith(DELETED_OBJS_END):
                 del_lines = False
             elif current_chart is not None and not del_lines:
-                old_dag_lines.append((current_chart, l))
+                old_dag_lines.append((current_chart, ln))
 
     for res, changes in resource_changes.items():
         if changes.state == ResourceState.Removed:
-            for chart, l in old_dag_lines:
-                if res in l:
-                    subgraphs[chart].add_deleted_line(l)
+            for chart, ln in old_dag_lines:
+                if res in ln:
+                    subgraphs[chart].add_deleted_line(ln)

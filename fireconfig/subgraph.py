@@ -26,14 +26,14 @@ class ChartSubgraph:
         t_name = self.add_node(t)
         self._dag[s_name].append(t_name)
 
-    def add_deleted_line(self, l: str):
-        self._deleted_lines.add(l)
+    def add_deleted_line(self, ln: str):
+        self._deleted_lines.add(ln)
 
     def nodes(self) -> T.List[T.Tuple[str, str]]:
         return [(n, self._kinds[n]) for n in self._dag.keys()]
 
     def edges(self) -> T.List[T.Tuple[str, str]]:
-        return [(s, e) for s, l in self._dag.items() for e in l]
+        return [(s, e) for s, ln in self._dag.items() for e in ln]
 
     def deleted_lines(self) -> T.Iterable[str]:
         return self._deleted_lines

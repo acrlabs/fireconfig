@@ -51,8 +51,8 @@ def test_deployment():
         dry_run=True,
     )
 
-    assert diff == ""
-    with open(old_dag_filename) as f:
+    assert not diff
+    with open(old_dag_filename, encoding="utf-8") as f:
         # the resulting dag file has a blank newline which gets stripped by pre-commit,
         # so compare everything except for that very last character
         assert dag[:-1] == f.read()

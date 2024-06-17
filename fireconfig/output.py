@@ -23,7 +23,6 @@ def format_mermaid_graph(
     old_dag_filename: T.Optional[str],
     resource_changes: T.Mapping[str, ResourceChanges],
 ) -> str:
-
     mermaid = "```mermaid\n"
     mermaid += "%%{init: {'themeVariables': {'mainBkg': '#ddd'}}}%%\n"
     mermaid += "graph LR\n\n"
@@ -66,8 +65,8 @@ def format_diff(resource_changes: T.Mapping[str, ResourceChanges]) -> str:
     for res, c in sorted(resource_changes.items()):
         diff_details += f"<details><summary>\n\n#### {res}: {c.state.name}\n\n</summary>\n\n"
         for path, r1, r2 in c.changes:
-            r1_str = json.dumps(r1, indent='  ') if r1 != notpresent else r1
-            r2_str = json.dumps(r2, indent='  ') if r2 != notpresent else r2
+            r1_str = json.dumps(r1, indent="  ") if r1 != notpresent else r1
+            r2_str = json.dumps(r2, indent="  ") if r2 != notpresent else r2
             diff_details += f"```\n{path}:\n{r1_str} --> {r2_str}\n```\n\n"
         diff_details += "</details>\n"
 

@@ -11,7 +11,9 @@ from fireconfig.volume import VolumesBuilder
 
 
 class ContainerBuilder:
-    def __init__(self, name: str, image: str, command: T.Optional[str] = None, args: T.Optional[T.Sequence[str]] = None):
+    def __init__(
+        self, name: str, image: str, command: T.Optional[str] = None, args: T.Optional[T.Sequence[str]] = None
+    ):
         self._name = name
         self._image = image
 
@@ -35,7 +37,8 @@ class ContainerBuilder:
         return self
 
     def with_resources(
-        self, *,
+        self,
+        *,
         requests: T.Optional[T.Mapping[str, T.Any]] = None,
         limits: T.Optional[T.Mapping[str, T.Any]] = None,
     ) -> T.Self:
@@ -67,9 +70,7 @@ class ContainerBuilder:
         else:
             optional["env"] = []
         if self._ports:
-            optional["ports"] = [
-                k8s.ContainerPort(container_port=p) for p in self._ports
-            ]
+            optional["ports"] = [k8s.ContainerPort(container_port=p) for p in self._ports]
         if self._resources is not None:
             optional["resources"] = {}
             if self._resources.limits is not None:

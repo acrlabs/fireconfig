@@ -3,10 +3,10 @@ from cdk8s import Chart
 from fireconfig import k8s
 
 _STANDARD_NAMESPACES = [
-    'default',
-    'kube-node-lease',
-    'kube-public',
-    'kube-system',
+    "default",
+    "kube-node-lease",
+    "kube-public",
+    "kube-system",
 ]
 
 

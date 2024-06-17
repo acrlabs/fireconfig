@@ -41,7 +41,7 @@ class DeploymentBuilder(ObjectBuilder):
     def with_replicas(self, min_replicas: int, max_replicas: T.Optional[int] = None) -> T.Self:
         if max_replicas is not None:
             if min_replicas > max_replicas:
-                raise ValueError(f'min_replicas cannot be larger than max_replicas: {min_replicas} > {max_replicas}')
+                raise ValueError(f"min_replicas cannot be larger than max_replicas: {min_replicas} > {max_replicas}")
             self._replicas = (min_replicas, max_replicas)
         else:
             self._replicas = min_replicas
@@ -77,7 +77,7 @@ class DeploymentBuilder(ObjectBuilder):
         self._tolerations.append((key, value, effect))
         return self
 
-    def _build(self, meta: k8s.ObjectMeta, chart: Chart) -> k8s.KubeDeployment:
+    def _build(self, meta: k8s.ObjectMeta, chart: Chart) -> k8s.KubeDeployment:  # noqa: PLR0912
         pod_meta: T.MutableMapping[str, T.Any] = {}
         if self._pod_annotations:
             pod_meta["annotations"] = self._pod_annotations
@@ -96,7 +96,8 @@ class DeploymentBuilder(ObjectBuilder):
         if self._service_account_role is not None:
             sa = self._build_service_account(chart)
             rb = self._build_role_binding_for_service_account(
-                chart, sa,
+                chart,
+                sa,
                 self._service_account_role,
                 self._service_account_role_is_cluster_role,
             )
@@ -112,9 +113,7 @@ class DeploymentBuilder(ObjectBuilder):
             self._build_service(chart)
 
         if len(self._tolerations) > 0:
-            optional["tolerations"] = [
-                {"key": t[0], "value": t[1], "effect": t[2]} for t in self._tolerations
-            ]
+            optional["tolerations"] = [{"key": t[0], "value": t[1], "effect": t[2]} for t in self._tolerations]
 
         vols: VolumeDefsWithObject = dict()
         for c in self._containers:
@@ -122,13 +121,14 @@ class DeploymentBuilder(ObjectBuilder):
 
         if vols:
             optional["volumes"] = []
-            for (defn, obj) in vols.values():
+            for defn, obj in vols.values():
                 optional["volumes"].append(defn)
                 if obj is not None:
                     self._deps.append(obj)
 
         depl = k8s.KubeDeployment(
-            chart, f"{self._tag}depl",
+            chart,
+            f"{self._tag}depl",
             metadata=meta,
             spec=k8s.DeploymentSpec(
                 selector=k8s.LabelSelector(match_labels=self._selector),
@@ -139,15 +139,17 @@ class DeploymentBuilder(ObjectBuilder):
                         containers=[c.build() for c in self._containers],
                         **optional,
                     ),
-                )
-            )
+                ),
+            ),
         )
 
         for i in range(len(self._containers)):
-            depl.add_json_patch(JsonPatch.add(
-                f"/spec/template/spec/containers/{i}/env/-",
-                {"name": "POD_OWNER", "value": depl.name},
-            ))
+            depl.add_json_patch(
+                JsonPatch.add(
+                    f"/spec/template/spec/containers/{i}/env/-",
+                    {"name": "POD_OWNER", "value": depl.name},
+                )
+            )
 
         return depl
 
@@ -158,12 +160,12 @@ class DeploymentBuilder(ObjectBuilder):
     def _build_service(self, chart: Chart) -> k8s.KubeService:
         assert self._service_ports
         return k8s.KubeService(
-            chart, "service",
+            chart,
+            "service",
             metadata={"name": self._service_name},
             spec=k8s.ServiceSpec(
                 ports=[
-                    k8s.ServicePort(port=p, target_port=k8s.IntOrString.from_number(p))
-                    for p in self._service_ports
+                    k8s.ServicePort(port=p, target_port=k8s.IntOrString.from_number(p)) for p in self._service_ports
                 ],
                 selector=self._selector,
             ),
@@ -176,12 +178,13 @@ class DeploymentBuilder(ObjectBuilder):
         role_name: str,
         is_cluster_role: bool,
     ) -> T.Union[k8s.KubeClusterRoleBinding, k8s.KubeRoleBinding]:
-
-        subjects = [k8s.Subject(
-            kind="ServiceAccount",
-            name=service_account.name,
-            namespace=chart.namespace,
-        )]
+        subjects = [
+            k8s.Subject(
+                kind="ServiceAccount",
+                name=service_account.name,
+                namespace=chart.namespace,
+            )
+        ]
         role_ref = k8s.RoleRef(
             api_group="rbac.authorization.k8s.io",
             kind="ClusterRole" if is_cluster_role else "Role",

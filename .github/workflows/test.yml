@@ -1,6 +1,7 @@
+---
 name: Run tests
 
-on:
+on:  # yamllint disable-line rule:truthy
   push:
 
 jobs:

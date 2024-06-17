@@ -45,5 +45,4 @@ class ObjectBuilder(metaclass=ABCMeta):
         return obj
 
     @abstractmethod
-    def _build(self, meta: k8s.ObjectMeta, chart: Chart):
-        ...
+    def _build(self, meta: k8s.ObjectMeta, chart: Chart): ...

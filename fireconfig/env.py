@@ -11,7 +11,7 @@ class EnvBuilder:
 
     def with_field_ref(self, name: str, field: DownwardAPIField, key: T.Optional[str] = None) -> T.Self:
         field_str = str(field)
-        if field in (DownwardAPIField.ANNOTATION, DownwardAPIField.LABEL):
+        if field in {DownwardAPIField.ANNOTATION, DownwardAPIField.LABEL}:
             field_str = field_str.format(key)
 
         self._env[name] = ("valueFrom", {"fieldRef": {"fieldPath": field_str}})

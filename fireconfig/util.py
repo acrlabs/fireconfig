@@ -32,13 +32,11 @@ def is_cluster_scoped(kind: str) -> bool:
         "PriorityClass",
         "PriorityLevelConfiguration",
         "RuntimeClass",
-        "SelfSubjectAccessReview"
-        "SelfSubjectRulesReview",
+        "SelfSubjectAccessReview" "SelfSubjectRulesReview",
         "StorageClass",
         "SubjectAccessReview",
         "TokenReview",
-        "PersistentVolume"
-        "ValidatingWebhookConfiguration",
+        "PersistentVolume" "ValidatingWebhookConfiguration",
         "VolumeAttachment",
     }
 

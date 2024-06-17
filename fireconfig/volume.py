@@ -20,7 +20,7 @@ class VolumesBuilder:
 
     def get_path_to_config_map(self, vol_name: str, path_name: str) -> str:
         assert vol_name in self._config_map_data and path_name in self._config_map_data[vol_name]
-        path = self._volume_mounts[vol_name] + '/' + path_name
+        path = self._volume_mounts[vol_name] + "/" + path_name
         return path
 
     def build_mounts(self, names: T.Optional[T.Iterable[str]] = None) -> T.Sequence[T.Mapping]:
@@ -39,15 +39,21 @@ class VolumesBuilder:
                 continue
 
             cm = k8s.KubeConfigMap(chart, vol_name, data=data)
-            volumes[vol_name] = ({
-                "name": vol_name,
-                "configMap": {
-                    "name": cm.name,
-                    "items": [{
-                        "key": cm_entry,
-                        "path": cm_entry,
-                    } for cm_entry in data],
-                }
-            }, cm)
+            volumes[vol_name] = (
+                {
+                    "name": vol_name,
+                    "configMap": {
+                        "name": cm.name,
+                        "items": [
+                            {
+                                "key": cm_entry,
+                                "path": cm_entry,
+                            }
+                            for cm_entry in data
+                        ],
+                    },
+                },
+                cm,
+            )
 
         return volumes
