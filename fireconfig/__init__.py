@@ -7,6 +7,7 @@ from cdk8s import App
 from cdk8s import Chart
 from cdk8s import DependencyGraph
 from constructs import Construct
+from stringcase import spinalcase
 
 from fireconfig.container import ContainerBuilder
 from fireconfig.deployment import DeploymentBuilder
@@ -24,10 +25,10 @@ from fireconfig.util import fix_cluster_scoped_objects
 from fireconfig.volume import VolumesBuilder
 
 __all__ = [
-    'ContainerBuilder',
-    'DeploymentBuilder',
-    'EnvBuilder',
-    'VolumesBuilder',
+    "ContainerBuilder",
+    "DeploymentBuilder",
+    "EnvBuilder",
+    "VolumesBuilder",
 ]
 
 
@@ -36,14 +37,12 @@ class AppPackage(metaclass=ABCMeta):
     Users should implement the AppPackage class to pass into fireconfig
     """
 
-    @property
-    @abstractmethod
-    def id(self):
-        ...
+    @classmethod
+    def id(cls) -> str:
+        return spinalcase(cls.__name__)
 
     @abstractmethod
-    def compile(self, app: Construct):
-        ...
+    def compile(self, app: Construct): ...
 
 
 def compile(
@@ -80,13 +79,15 @@ def compile(
     for ns, pkglist in pkgs.items():
         add_missing_namespace(gl, ns)
         for pkg in pkglist:
-            chart = Chart(app, pkg.id, namespace=ns, disable_resource_name_hashes=True)
+            chart = Chart(
+                app, pkg.id(), namespace=ns, disable_resource_name_hashes=True
+            )
             chart.add_dependency(gl)
             pkg.compile(chart)
 
             fix_cluster_scoped_objects(chart)
-            subgraphs[pkg.id] = ChartSubgraph(pkg.id)
-            subgraph_dag[gl.node.id].append(pkg.id)
+            subgraphs[pkg.id()] = ChartSubgraph(pkg.id())
+            subgraph_dag[gl.node.id].append(pkg.id())
 
     # cdk8s doesn't compute the full dependency graph until you call `synth`, and there's no
     # public access to it at that point, which is annoying.  Until that point, the dependency
@@ -106,9 +107,13 @@ def compile(
     try:
         find_deleted_nodes(subgraphs, resource_changes, dag_filename)
     except Exception as e:
-        print(f"WARNING: {e}\nCould not read old DAG file, graph may be missing deleted nodes")
+        print(
+            f"WARNING: {e}\nCould not read old DAG file, graph may be missing deleted nodes"
+        )
 
-    graph_str = format_mermaid_graph(subgraph_dag, subgraphs, dag_filename, resource_changes)
+    graph_str = format_mermaid_graph(
+        subgraph_dag, subgraphs, dag_filename, resource_changes
+    )
     diff_str = format_diff(resource_changes)
 
     if not dry_run:

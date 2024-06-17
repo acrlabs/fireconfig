@@ -2,5 +2,5 @@
 
 test:
 	poetry run coverage erase
-	JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION=1 poetry run coverage run -m pytest -svv itests
+	JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION=1 poetry run coverage run -m pytest -svv tests itests
 	poetry run coverage report --show-missing
