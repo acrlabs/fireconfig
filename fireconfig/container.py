@@ -65,6 +65,7 @@ class ContainerBuilder:
         if self._args:
             optional["args"] = self._args
 
+        optional["env"] = []
         if self._env:
             if env := self._env.build(self._env_names):
                 optional["env"] = env
