@@ -66,9 +66,10 @@ class ContainerBuilder:
             optional["args"] = self._args
 
         if self._env:
-            optional["env"] = self._env.build(self._env_names)
-        else:
-            optional["env"] = []
+            if env := self._env.build(self._env_names):
+                optional["env"] = env
+            if env_from := self._env.build_from():
+                optional["env_from"] = env_from
         if self._ports:
             optional["ports"] = [k8s.ContainerPort(container_port=p) for p in self._ports]
         if self._resources is not None:
