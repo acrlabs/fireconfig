@@ -122,7 +122,9 @@ def compute_diff(app: App) -> T.Tuple[T.Mapping[str, T.Any], T.Mapping[str, str]
             new_defs[node_id] = new_obj.to_json()
             kinds[node_id] = new_obj.kind
 
-    return DeepDiff(old_defs, new_defs, view="tree"), kinds
+    # threshold_to_diff_deeper was added in deepdiff 8.0.0
+    # threshold_to_diff_deeper=0 maintains previous behavior from <7.0.0
+    return DeepDiff(old_defs, new_defs, view="tree",threshold_to_diff_deeper=0), kinds
 
 
 def walk_dep_graph(v: DependencyVertex, subgraphs: T.Mapping[str, ChartSubgraph]):
